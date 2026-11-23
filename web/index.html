@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study Focus Planner</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fbf4f6; color: #3f3550; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.4; }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1, h2, h3 { color: #4b3d66; margin: 0; }
+  h1 { font-size: 28px; }
+  h2 { font-size: 18px; margin-bottom: 12px; }
+  .muted { color: #6f6282; font-size: 14px; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+  .err { color: #b0475e; font-size: 14px; margin-top: 4px; }
+  .lang { display: flex; gap: 6px; }
+  .pill { border: 1px solid #e6dcf2; background: #fff; color: #4b3d66; border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; font-size: 14px; }
+  .pill.active { background: #7a5cc4; color: #fff; border-color: #7a5cc4; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+  .panel { background: #fff; border: 1px solid #e6dcf2; border-radius: 20px; padding: 20px; margin-bottom: 16px; }
+  .row .panel { margin-bottom: 0; }
+  .timer { text-align: center; }
+  .clock { font-size: 64px; font-weight: 700; color: #4b3d66; font-variant-numeric: tabular-nums; }
+  .bar { height: 6px; background: #efe8f8; border-radius: 999px; overflow: hidden; margin: 12px 0 16px; }
+  .bar > div { height: 100%; background: #a58be0; border-radius: 999px; transition: width .3s; }
+  button.primary { background: #7a5cc4; color: #fff; border: 0; border-radius: 999px; padding: 10px 20px; font: inherit; cursor: pointer; }
+  button.primary:hover { background: #6a4db3; }
+  button.secondary { background: #fff; color: #4b3d66; border: 1px solid #e6dcf2; border-radius: 999px; padding: 10px 20px; font: inherit; cursor: pointer; }
+  button.link { background: none; border: 0; color: #b0475e; cursor: pointer; font: inherit; font-size: 13px; padding: 0; }
+  button.link:hover { text-decoration: underline; }
+  input[type=text], input[type=date], input[type=number], select { border: 1px solid #e6dcf2; border-radius: 12px; padding: 8px 10px; font: inherit; color: #3f3550; background: #fff; min-width: 0; }
+  .form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .form input[type=text] { flex: 1 1 140px; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li.task { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #f1ebf8; }
+  li.task:first-child { border-top: 0; }
+  li.task .body { flex: 1; min-width: 0; }
+  li.task .title { word-break: break-word; }
+  li.done { opacity: .55; }
+  li.done .title { text-decoration: line-through; }
+  .chart { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 150px; }
+  .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .col .n { font-size: 13px; color: #6f6282; margin-bottom: 4px; }
+  .col .b { width: 100%; max-width: 48px; background: #a58be0; border-radius: 8px 8px 4px 4px; }
+  .col .b.zero { opacity: .25; }
+  .col .d { font-size: 12px; color: #6f6282; margin-top: 6px; }
+  .goal { border: 1px solid #e6dcf2; border-radius: 16px; padding: 14px; margin-top: 12px; }
+  .goal .head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .goal .step { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .goal .step span { flex: 1; word-break: break-word; }
+  .goal .step.done span { text-decoration: line-through; opacity: .6; }
+  .goal .bar { margin: 8px 0 10px; }
+  details summary { cursor: pointer; font-size: 18px; font-weight: 600; color: #4b3d66; }
+  details[open] summary { margin-bottom: 12px; }
+  .field { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .field input[type=number] { width: 90px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; background: #f4eefb; border-radius: 999px; padding: 4px 12px; margin: 0 6px 6px 0; }
+  .chip button { background: none; border: 0; color: #b0475e; cursor: pointer; font-size: 16px; padding: 0; line-height: 1; }
+  body { min-height: 100vh; }
+  [hidden] { display: none !important; }
+  dialog { border: 1px solid #e6dcf2; border-radius: 20px; padding: 20px; width: min(680px, 94vw); max-height: 90vh; color: #3f3550; background: #fff; }
+  dialog::backdrop { background: rgba(63, 53, 80, .45); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .dlg-head button { font-size: 14px; }
+  .preview { max-width: 100%; max-height: 220px; border-radius: 12px; border: 1px solid #e6dcf2; margin: 10px 0; display: block; }
+  .rv h3 { font-size: 15px; margin: 14px 0 6px; }
+  .rv ul { list-style: disc; padding-left: 20px; }
+  .rv li { margin-bottom: 4px; }
+  .q { border: 1px solid #e6dcf2; border-radius: 14px; padding: 12px; margin-top: 10px; }
+  .q label { display: block; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
+  .q label.ok { background: #e3f5e9; }
+  .q label.bad { background: #fbe9ee; }
+  .q .why { font-size: 13px; color: #6f6282; margin-top: 6px; }
+  a.chk, button.chk { background: none; border: 0; color: #7a5cc4; cursor: pointer; font: inherit; font-size: 13px; padding: 0; }
+  button.chk:hover { text-decoration: underline; }
+  .chat-log { max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 2px 8px; }
+  .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; word-break: break-word; }
+  .msg.bot { background: #f4eefb; align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.me { background: #7a5cc4; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg.errmsg { background: #fbe9ee; color: #b0475e; align-self: flex-start; }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .thumb { position: relative; }
+  .thumb img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid #e6dcf2; display: block; }
+  .thumb button { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: #b0475e; color: #fff; cursor: pointer; line-height: 1; padding: 0; font-size: 13px; }
+  .msg img { max-width: 120px; max-height: 120px; border-radius: 8px; margin: 0 4px 4px 0; display: inline-block; vertical-align: top; }
+  body.dark-bg h1 { color: #fff; }
+  body.dark-bg header .muted { color: #d9d0ea; }
+  body.dark-bg header .err { color: #ffb3c4; }
+  .sound { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; }
+  .sound input[type=range] { width: 110px; accent-color: #7a5cc4; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #e6dcf2; cursor: pointer; padding: 0; }
+  .swatch.active { border: 3px solid #7a5cc4; }
+  input[type=color] { width: 40px; height: 34px; border: 1px solid #e6dcf2; border-radius: 10px; padding: 2px; background: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 id="title"></h1>
+      <div class="muted" id="subtitle"></div>
+      <div class="err" id="storageError"></div>
+    </div>
+    <div class="lang">
+      <button class="pill" id="langEn">EN</button>
+      <button class="pill" id="langEs">ES</button>
+      <button class="pill" id="signOutBtn" hidden></button>
+    </div>
+  </header>
+
+  <div id="home">
+  <div class="row">
+    <section class="panel timer">
+      <h2 id="timerHeading"></h2>
+      <div class="clock" id="clock">25:00</div>
+      <div class="muted" id="modeLabel"></div>
+      <div class="bar"><div id="timerBar" style="width:0%"></div></div>
+      <button class="primary" id="startBtn"></button>
+      <button class="secondary" id="resetBtn"></button>
+      <div class="sound">
+        <select id="soundSelect"></select>
+        <button class="secondary" id="previewBtn" style="padding:8px 14px"></button>
+        <input type="range" id="volume" min="0" max="100" step="1">
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 id="tasksHeading"></h2>
+      <div class="form">
+        <select id="taskSubject"></select>
+        <select id="taskGoal"></select>
+        <input type="text" id="taskTitle" maxlength="200">
+        <input type="date" id="taskDue">
+        <button class="primary" id="addTaskBtn"></button>
+      </div>
+      <ul id="taskList"></ul>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2 id="chartHeading"></h2>
+    <div class="chart" id="chart"></div>
+    <div class="muted" id="chartSummary" style="margin-top:10px"></div>
+  </section>
+
+  <section class="panel">
+    <h2 id="goalsHeading"></h2>
+    <div class="form">
+      <input type="text" id="goalTitle" maxlength="200">
+      <input type="date" id="goalDue">
+      <button class="primary" id="addGoalBtn"></button>
+    </div>
+    <div id="goalList"></div>
+  </section>
+
+  <section class="panel" id="chatPanel" hidden>
+    <h2 id="chatHeading"></h2>
+    <div class="chat-log" id="chatLog" aria-live="polite"></div>
+    <div class="thumbs" id="chatPending" hidden></div>
+    <div class="form" style="margin:10px 0 0">
+      <select id="chatSubject"></select>
+      <button class="secondary" id="chatAttach" type="button" style="padding:8px 12px">📎</button>
+      <input type="file" id="chatFile" accept="image/*" multiple hidden>
+      <input type="text" id="chatInput" maxlength="1500">
+      <button class="primary" id="chatSend"></button>
+      <button class="secondary" id="chatNew"></button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary id="settingsHeading"></summary>
+      <div class="field"><label for="focusMin" id="focusLabel"></label><input type="number" id="focusMin" min="1" max="120"></div>
+      <div class="field"><label for="breakMin" id="breakLabel"></label><input type="number" id="breakMin" min="1" max="60"></div>
+      <div class="field"><label for="levelSelect" id="levelLabel"></label><select id="levelSelect"></select></div>
+      <h3 id="subjectsHeading" style="font-size:15px;margin:14px 0 8px"></h3>
+      <div id="subjectList"></div>
+      <div class="form">
+        <input type="text" id="newSubject" maxlength="40">
+        <button class="secondary" id="addSubjectBtn"></button>
+      </div>
+      <div class="err" id="subjectError"></div>
+      <h3 id="bgHeading" style="font-size:15px;margin:18px 0 8px"></h3>
+      <div class="swatches" id="bgSwatches"></div>
+      <div class="field"><label for="bgColor" id="bgCustomLabel"></label><input type="color" id="bgColor" value="#fbf4f6"></div>
+    </details>
+  </section>
+  </div>
+
+  <section class="panel" id="taskView" hidden>
+  <div class="dlg-head"><button class="pill" id="ckClose"></button></div>
+  <h2 id="ckTitle" style="margin:0 0 6px"></h2>
+  <div class="muted" id="tvMeta"></div>
+  <div class="form" style="margin:12px 0 0">
+    <input type="text" id="tvTitle" maxlength="200">
+    <select id="tvSubject"></select>
+    <input type="date" id="tvDue">
+  </div>
+  <div class="field" style="margin-top:12px"><label><input type="checkbox" id="tvDone"> <span id="tvDoneLabel"></span></label></div>
+  <div class="field"><label for="tvGoal" id="tvGoalLabel"></label><select id="tvGoal"></select></div>
+  <div id="ckTools">
+  <div class="muted" id="ckHint"></div>
+  <div class="form" style="margin:10px 0 0">
+    <button class="secondary" id="ckTake"></button>
+    <button class="secondary" id="ckChoose"></button>
+    <button class="primary" id="ckRun" disabled></button>
+  </div>
+  <input type="file" id="ckFileTake" accept="image/*" capture="environment" hidden>
+  <input type="file" id="ckFileChoose" accept="image/*" hidden>
+  <img class="preview" id="ckPreview" alt="" hidden>
+  <div id="ckDyn"></div>
+  </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'study-planner';
+  var MAX_SUBJECTS = 12;
+  var DEFAULT_SUBJECTS = ['Maths', 'Language', 'English', 'Science', 'History'];
+  var LEVELS = [
+    { id: '1eso', label: '1º ESO' }, { id: '2eso', label: '2º ESO' }, { id: '3eso', label: '3º ESO' }, { id: '4eso', label: '4º ESO' },
+    { id: '1bach', label: '1º Bachillerato' }, { id: '2bach', label: '2º Bachillerato' }
+  ];
+  function levelLabel(id) { var l = LEVELS.filter(function (x) { return x.id === id; })[0]; return l ? l.label : ''; }
+  var SOUND_IDS = ['none', 'white', 'brown', 'rain', 'storm', 'waves', 'stream', 'wind', 'fire', 'birds', 'crickets', 'cafe', 'elevator', 'piano'];
+  var BACKGROUNDS = [
+    { id: 'blush', css: '#fbf4f6' }, { id: 'lavender', css: '#f3eefb' }, { id: 'mint', css: '#eaf6f0' },
+    { id: 'sky', css: '#eaf3fb' }, { id: 'peach', css: '#fdf0e6' }, { id: 'lemon', css: '#fbf8e4' },
+    { id: 'dusk', css: 'linear-gradient(135deg,#f6e9f5,#e4ecfb)' },
+    { id: 'meadow', css: 'linear-gradient(135deg,#eaf6ee,#e6f1fb)' },
+    { id: 'sunrise', css: 'linear-gradient(135deg,#fdeee6,#f6e6f5)' },
+    { id: 'night', css: '#2f2a44', dark: true }
+  ];
+  function validBg(v) {
+    return typeof v === 'string' && (/^#[0-9a-fA-F]{6}$/.test(v) || BACKGROUNDS.some(function (b) { return b.id === v; }));
+  }
+
+  var I18N = {
+    en: {
+      title: 'Study Focus Planner',
+      subtitle: '{blocks} focus blocks completed today · {open} open tasks',
+      timer: 'Focus timer', focusBlock: 'Focus block', shortBreak: 'Short break',
+      start: 'Start', pause: 'Pause', reset: 'Reset',
+      tasks: 'My tasks', taskPlaceholder: 'New task', addTask: 'Add task',
+      noTasks: 'No tasks yet. Add one above.', del: 'Delete',
+      chart: 'Last 7 days', weekTotal: '{n} focus blocks this week',
+      goals: 'Main goals', goalPlaceholder: 'New goal', addGoal: 'Add goal',
+      noGoals: 'No goals yet. Add one above.',
+      stepPlaceholder: 'New step', addStep: 'Add step', remove: 'Remove', delGoal: 'Delete goal',
+      today: 'today', tomorrow: 'tomorrow', daysLeft: '{n} days left', finishedAgo: 'finished {n} days ago', finishedAgo1: 'finished 1 day ago',
+      stepsDone: '{done} of {total} steps done',
+      settings: 'Settings', focusLen: 'Focus length (minutes)', breakLen: 'Break length (minutes)',
+      subjects: 'Subjects', subjectPlaceholder: 'New subject', addSubject: 'Add subject',
+      errLast: 'At least one subject is required.', errDup: 'That subject already exists.', errMax: 'You can have at most {n} subjects.',
+      errLoad: 'Could not load saved data. Using starting data.', errSave: 'Could not save your data.',
+      signOut: 'Sign out', signingIn: 'Signing in…', suggest: 'Suggest steps with AI', suggesting: 'Thinking…',
+      errAi: 'The AI could not suggest steps. Try again.', errAiLimit: 'Daily AI limit reached. Try again tomorrow.',
+      errSync: 'Could not sync with the server. Changes are kept on this device.',
+      level: 'School year', levelNone: 'Not set',
+      ckDiscuss: '💬 Discuss with the tutor', chatAbout: 'About: {title}',
+      chatOpener: 'I checked my work on "{title}". Can you help me understand what to fix, without giving me the answers?',
+      editTitle: 'Task title', editSubject: 'Subject', editDue: 'Due date',
+      taskGoal: 'Goal', noGoal: 'No goal', gTasks: 'Tasks', gTaskPlaceholder: 'New task for this goal', addGoalTask: 'Add task', unlink: 'Unlink',
+      tasksDone: '{done} of {total} tasks done', openTask: 'Open ›', back: '← Back', markDone: 'Mark as done',
+      ckBtn: '📷 Check my work', ckTitle: 'Check my work', ckClose: 'Close',
+      ckHint: 'Take a photo of your notes, summary or diagram in good light, with the page flat and the text filling the frame. The photo is checked and then discarded.',
+      ckTake: 'Take photo', ckChoose: 'Choose image', ckRun: 'Check', ckChecking: 'Checking…',
+      ckVerdict: 'Review', ckRight: 'What is right', ckFix: 'Corrections', ckAdd: 'Things to add', ckFixArrow: 'Better',
+      ckExam: 'Create mini exam', ckExamNew: 'New exam', ckExamBusy: 'Making the exam…', ckSubmit: 'Check answers', ckScore: 'Score: {n} of {total}',
+      ckErr: 'Could not review the image. Try a clearer photo.', ckErrLimit: 'Daily limit reached. Try again tomorrow.', ckExamErr: 'Could not make the exam. Try again.',
+      ckSaved: 'Using your saved notes for this task.',
+      ckRead: 'What I read', ckUnclear: 'Hard to read', ckReadTip: 'If this is not what you wrote, retake the photo with more light, the page flat and the text filling the frame.',
+      chat: 'Study tutor', chatWelcome: 'Hi! I am your study tutor. Tell me what you are working on and what you have tried so far. I will give you hints and questions so you can work out the answer yourself.',
+      chatAttach: 'Attach photos (up to 3)', chatImgDefault: 'Here is a photo of my work.', chatImgErr: 'Could not read that image.',
+      chatPlaceholder: 'Ask about your homework…', chatSend: 'Send', chatNew: 'New chat', chatAny: 'Any subject', chatThinking: 'Thinking…',
+      errChat: 'The tutor could not answer. Try again.', errChatLimit: 'Daily tutor limit reached. Try again tomorrow.',
+      sounds: { none: 'No sound', white: 'White noise', brown: 'Brown noise', rain: 'Rain', storm: 'Thunderstorm', waves: 'Waves', stream: 'Stream', wind: 'Wind', fire: 'Crackling fire', birds: 'Birds', crickets: 'Crickets', cafe: 'Café chatter', elevator: 'Elevator music', piano: 'Soft piano' },
+      preview: '▶ Preview', stopPreview: '■ Stop', volume: 'Volume',
+      background: 'Background', bgCustom: 'Custom color',
+      bgNames: { blush: 'Blush', lavender: 'Lavender', mint: 'Mint', sky: 'Sky', peach: 'Peach', lemon: 'Lemon', dusk: 'Dusk', meadow: 'Meadow', sunrise: 'Sunrise', night: 'Night' },
+      days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      subj: { Maths: 'Maths', Language: 'Language', English: 'English', Science: 'Science', History: 'History' },
+      starter: {}
+    },
+    es: {
+      title: 'Planificador de estudio',
+      subtitle: '{blocks} bloques de concentración completados hoy · {open} tareas pendientes',
+      timer: 'Temporizador de concentración', focusBlock: 'Bloque de concentración', shortBreak: 'Descanso corto',
+      start: 'Iniciar', pause: 'Pausar', reset: 'Reiniciar',
+      tasks: 'Mis tareas', taskPlaceholder: 'Nueva tarea', addTask: 'Añadir tarea',
+      noTasks: 'Aún no hay tareas. Añade una arriba.', del: 'Eliminar',
+      chart: 'Últimos 7 días', weekTotal: '{n} bloques de concentración esta semana',
+      goals: 'Objetivos principales', goalPlaceholder: 'Nuevo objetivo', addGoal: 'Añadir objetivo',
+      noGoals: 'Aún no hay objetivos. Añade uno arriba.',
+      stepPlaceholder: 'Nuevo paso', addStep: 'Añadir paso', remove: 'Quitar', delGoal: 'Eliminar objetivo',
+      today: 'hoy', tomorrow: 'mañana', daysLeft: 'faltan {n} días', finishedAgo: 'terminó hace {n} días', finishedAgo1: 'terminó hace 1 día',
+      stepsDone: '{done} de {total} pasos hechos',
+      settings: 'Ajustes', focusLen: 'Duración de concentración (minutos)', breakLen: 'Duración del descanso (minutos)',
+      subjects: 'Asignaturas', subjectPlaceholder: 'Nueva asignatura', addSubject: 'Añadir asignatura',
+      errLast: 'Debe quedar al menos una asignatura.', errDup: 'Esa asignatura ya existe.', errMax: 'Puedes tener como máximo {n} asignaturas.',
+      errLoad: 'No se pudieron cargar los datos guardados. Se usan los datos iniciales.', errSave: 'No se pudieron guardar tus datos.',
+      signOut: 'Cerrar sesión', signingIn: 'Iniciando sesión…', suggest: 'Sugerir pasos con IA', suggesting: 'Pensando…',
+      errAi: 'La IA no pudo sugerir pasos. Inténtalo de nuevo.', errAiLimit: 'Límite diario de IA alcanzado. Inténtalo mañana.',
+      errSync: 'No se pudo sincronizar con el servidor. Los cambios se guardan en este dispositivo.',
+      level: 'Curso', levelNone: 'Sin indicar',
+      ckDiscuss: '💬 Hablarlo con el tutor', chatAbout: 'Sobre: {title}',
+      chatOpener: 'He revisado mi trabajo de "{title}". ¿Puedes ayudarme a entender qué corregir, sin darme las respuestas?',
+      editTitle: 'Título de la tarea', editSubject: 'Asignatura', editDue: 'Fecha de entrega',
+      taskGoal: 'Objetivo', noGoal: 'Sin objetivo', gTasks: 'Tareas', gTaskPlaceholder: 'Nueva tarea para este objetivo', addGoalTask: 'Añadir tarea', unlink: 'Desvincular',
+      tasksDone: '{done} de {total} tareas hechas', openTask: 'Abrir ›', back: '← Volver', markDone: 'Marcar como hecha',
+      ckBtn: '📷 Revisar mi trabajo', ckTitle: 'Revisar mi trabajo', ckClose: 'Cerrar',
+      ckHint: 'Haz una foto de tus apuntes, resumen o diagrama con buena luz, la hoja plana y el texto ocupando toda la imagen. La foto se revisa y luego se descarta.',
+      ckTake: 'Hacer foto', ckChoose: 'Elegir imagen', ckRun: 'Revisar', ckChecking: 'Revisando…',
+      ckVerdict: 'Valoración', ckRight: 'Lo que está bien', ckFix: 'Correcciones', ckAdd: 'Cosas que añadir', ckFixArrow: 'Mejor',
+      ckExam: 'Crear minitest', ckExamNew: 'Nuevo minitest', ckExamBusy: 'Creando el minitest…', ckSubmit: 'Comprobar respuestas', ckScore: 'Puntuación: {n} de {total}',
+      ckErr: 'No se pudo revisar la imagen. Prueba con una foto más clara.', ckErrLimit: 'Límite diario alcanzado. Inténtalo mañana.', ckExamErr: 'No se pudo crear el minitest. Inténtalo de nuevo.',
+      ckSaved: 'Usando tus apuntes guardados de esta tarea.',
+      ckRead: 'Lo que he leído', ckUnclear: 'Difícil de leer', ckReadTip: 'Si no es lo que escribiste, repite la foto con más luz, la hoja plana y el texto ocupando toda la imagen.',
+      chat: 'Tutor de estudio', chatWelcome: '¡Hola! Soy tu tutor de estudio. Cuéntame en qué estás trabajando y qué has probado ya. Te daré pistas y preguntas para que descubras la respuesta tú mismo.',
+      chatAttach: 'Adjuntar fotos (hasta 3)', chatImgDefault: 'Aquí tienes una foto de mi trabajo.', chatImgErr: 'No se pudo leer esa imagen.',
+      chatPlaceholder: 'Pregunta sobre tus deberes…', chatSend: 'Enviar', chatNew: 'Nuevo chat', chatAny: 'Cualquier asignatura', chatThinking: 'Pensando…',
+      errChat: 'El tutor no pudo responder. Inténtalo de nuevo.', errChatLimit: 'Límite diario del tutor alcanzado. Inténtalo mañana.',
+      sounds: { none: 'Sin sonido', white: 'Ruido blanco', brown: 'Ruido marrón', rain: 'Lluvia', storm: 'Tormenta', waves: 'Olas', stream: 'Arroyo', wind: 'Viento', fire: 'Fuego crepitando', birds: 'Pájaros', crickets: 'Grillos', cafe: 'Murmullo de cafetería', elevator: 'Música de ascensor', piano: 'Piano suave' },
+      preview: '▶ Probar', stopPreview: '■ Parar', volume: 'Volumen',
+      background: 'Fondo', bgCustom: 'Color personalizado',
+      bgNames: { blush: 'Rosa', lavender: 'Lavanda', mint: 'Menta', sky: 'Cielo', peach: 'Melocotón', lemon: 'Limón', dusk: 'Atardecer', meadow: 'Prado', sunrise: 'Amanecer', night: 'Noche' },
+      days: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+      subj: { Maths: 'Matemáticas', Language: 'Lengua', English: 'Inglés', Science: 'Ciencias', History: 'Historia' },
+      starter: {}
+    }
+  };
+
+  // ---------- helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function dateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function todayKey() { return dateKey(new Date()); }
+  function addDays(key, n) {
+    var p = key.split('-');
+    var d = new Date(+p[0], +p[1] - 1, +p[2] + n);
+    return dateKey(d);
+  }
+  function dayDiff(fromKey, toKey) {
+    var a = fromKey.split('-'), b = toKey.split('-');
+    return Math.round((Date.UTC(+b[0], +b[1] - 1, +b[2]) - Date.UTC(+a[0], +a[1] - 1, +a[2])) / 86400000);
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function clamp(v, lo, hi) { v = Math.round(Number(v)); if (!isFinite(v)) v = lo; return Math.min(hi, Math.max(lo, v)); }
+
+  var state;
+  function t(key, vars) {
+    var s = I18N[state.lang][key];
+    if (s === undefined) s = I18N.en[key];
+    if (typeof s !== 'string') return s;
+    if (vars) Object.keys(vars).forEach(function (k) { s = s.replace('{' + k + '}', vars[k]); });
+    return s;
+  }
+  function subjectName(name) {
+    var map = I18N[state.lang].subj;
+    return Object.prototype.hasOwnProperty.call(map, name) ? map[name] : name;
+  }
+
+  // ---------- state ----------
+  function defaultState() {
+    var today = todayKey();
+    return {
+      lang: 'en',
+      settings: { focusMin: 25, breakMin: 5, subjects: DEFAULT_SUBJECTS.slice(), bg: 'blush', sound: 'none', volume: 40, level: '' },
+      sessions: {},
+      tasks: [
+        { id: uid(), title: 'Fractions exercises, pages 42-43', subject: 'Maths', due: today, done: false },
+        { id: uid(), title: 'Learn 15 new vocabulary words', subject: 'English', due: today, done: true },
+        { id: uid(), title: 'Revise the cell parts for the quiz', subject: 'Science', due: '2026-11-25', done: false }
+      ],
+      goals: [
+        { id: uid(), title: 'Maths mid-term', due: '2026-12-10', steps: [
+          { id: uid(), title: 'Review chapters 1-3', done: true },
+          { id: uid(), title: 'Do practice exam', done: false },
+          { id: uid(), title: 'Fix mistakes', done: false }
+        ] },
+        { id: uid(), title: 'Science exam', due: '2026-12-18', steps: [
+          { id: uid(), title: 'Summarise units 4-5', done: false },
+          { id: uid(), title: 'Make flashcards', done: false }
+        ] }
+      ]
+    };
+  }
+
+  function sanitize(raw) {
+    var d = defaultState();
+    if (!raw || typeof raw !== 'object') return d;
+    var s = {
+      updatedAt: Number(raw.updatedAt) || 0,
+      lang: raw.lang === 'es' ? 'es' : 'en',
+      settings: {
+        focusMin: clamp(raw.settings && raw.settings.focusMin, 1, 120),
+        breakMin: clamp(raw.settings && raw.settings.breakMin, 1, 60),
+        subjects: [],
+        bg: validBg(raw.settings && raw.settings.bg) ? raw.settings.bg : 'blush',
+        level: LEVELS.some(function (l) { return l.id === (raw.settings && raw.settings.level); }) ? raw.settings.level : '',
+        sound: SOUND_IDS.indexOf(raw.settings && raw.settings.sound) >= 0 ? raw.settings.sound : 'none',
+        volume: raw.settings && raw.settings.volume !== undefined ? clamp(raw.settings.volume, 0, 100) : 40
+      },
+      sessions: {}, tasks: [], goals: []
+    };
+    if (!(raw.settings && raw.settings.focusMin)) s.settings.focusMin = 25;
+    if (!(raw.settings && raw.settings.breakMin)) s.settings.breakMin = 5;
+    var subs = raw.settings && Array.isArray(raw.settings.subjects) ? raw.settings.subjects : [];
+    subs.forEach(function (x) { if (typeof x === 'string' && x.trim() && s.settings.subjects.length < MAX_SUBJECTS) s.settings.subjects.push(x.trim()); });
+    if (!s.settings.subjects.length) s.settings.subjects = DEFAULT_SUBJECTS.slice();
+    if (raw.sessions && typeof raw.sessions === 'object') {
+      Object.keys(raw.sessions).forEach(function (k) { var n = Number(raw.sessions[k]); if (/^\d{4}-\d{2}-\d{2}$/.test(k) && n > 0) s.sessions[k] = Math.floor(n); });
+    }
+    (Array.isArray(raw.tasks) ? raw.tasks : []).forEach(function (x) {
+      if (x && typeof x.title === 'string') s.tasks.push({ id: String(x.id || uid()), title: x.title, subject: String(x.subject || s.settings.subjects[0]), due: String(x.due || todayKey()), done: !!x.done, notes: typeof x.notes === 'string' ? x.notes.slice(0, 4000) : '', goalId: typeof x.goalId === 'string' ? x.goalId : '' });
+    });
+    (Array.isArray(raw.goals) ? raw.goals : []).forEach(function (g) {
+      if (g && typeof g.title === 'string') {
+        var steps = [];
+        (Array.isArray(g.steps) ? g.steps : []).forEach(function (st) { if (st && typeof st.title === 'string') steps.push({ id: String(st.id || uid()), title: st.title, done: !!st.done }); });
+        s.goals.push({ id: String(g.id || uid()), title: g.title, due: g.due ? String(g.due) : '', steps: steps });
+      }
+    });
+    return s;
+  }
+
+  var loadError = false, saveError = false, syncError = false, aiError = '';
+  var cloud = null; // set when config.json is present and the user is signed in
+  var remoteTimer = null;
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw === null) return defaultState();
+      return sanitize(JSON.parse(raw));
+    } catch (e) { loadError = true; return defaultState(); }
+  }
+  function save() {
+    state.updatedAt = Date.now();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); saveError = false; }
+    catch (e) { saveError = true; }
+    if (cloud) scheduleRemoteSave();
+    renderError();
+  }
+  function scheduleRemoteSave() {
+    clearTimeout(remoteTimer);
+    remoteTimer = setTimeout(pushRemote, 800);
+  }
+  function pushRemote() {
+    return api('PUT', '/api/data', state).then(function () { syncError = false; renderError(); })
+      .catch(function () { syncError = true; renderError(); });
+  }
+
+  // ---------- cloud: Cognito login (authorization code + PKCE) and API ----------
+  var AUTH_KEY = 'study-planner-auth';
+  function readAuth() { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch (e) { return null; } }
+  function writeAuth(a) { if (a) localStorage.setItem(AUTH_KEY, JSON.stringify(a)); else localStorage.removeItem(AUTH_KEY); }
+  function b64url(bytes) {
+    var s = ''; bytes.forEach(function (b) { s += String.fromCharCode(b); });
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function randomString(n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return b64url(a); }
+  function startLogin() {
+    var verifier = randomString(48), stateParam = randomString(16);
+    sessionStorage.setItem('pkce-verifier', verifier);
+    sessionStorage.setItem('pkce-state', stateParam);
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then(function (hash) {
+      var q = new URLSearchParams({
+        response_type: 'code', client_id: cloud.cfg.clientId, redirect_uri: cloud.cfg.redirectUri,
+        scope: 'openid email', code_challenge_method: 'S256', code_challenge: b64url(new Uint8Array(hash)), state: stateParam
+      });
+      location.href = cloud.cfg.cognitoDomain + '/oauth2/authorize?' + q.toString();
+      return new Promise(function () {});
+    });
+  }
+  function tokenRequest(params) {
+    return fetch(cloud.cfg.cognitoDomain + '/oauth2/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(params).toString()
+    }).then(function (r) { if (!r.ok) throw new Error('token'); return r.json(); });
+  }
+  function storeTokens(tok, prev) {
+    var a = { idToken: tok.id_token, refreshToken: tok.refresh_token || (prev && prev.refreshToken), exp: Date.now() + (tok.expires_in || 3600) * 1000 };
+    writeAuth(a); return a;
+  }
+  function handleCallback(code, returnedState) {
+    var verifier = sessionStorage.getItem('pkce-verifier');
+    if (!verifier || returnedState !== sessionStorage.getItem('pkce-state')) return Promise.reject(new Error('state'));
+    return tokenRequest({ grant_type: 'authorization_code', client_id: cloud.cfg.clientId, code: code, redirect_uri: cloud.cfg.redirectUri, code_verifier: verifier })
+      .then(function (tok) { sessionStorage.removeItem('pkce-verifier'); sessionStorage.removeItem('pkce-state'); return storeTokens(tok); });
+  }
+  function getToken() {
+    var a = readAuth();
+    if (!a) return Promise.reject(new Error('no-auth'));
+    if (a.exp - 60000 > Date.now()) return Promise.resolve(a.idToken);
+    if (!a.refreshToken) return Promise.reject(new Error('no-auth'));
+    return tokenRequest({ grant_type: 'refresh_token', client_id: cloud.cfg.clientId, refresh_token: a.refreshToken })
+      .then(function (tok) { return storeTokens(tok, a).idToken; })
+      .catch(function () { writeAuth(null); throw new Error('no-auth'); });
+  }
+  function api(method, path, body) {
+    return getToken().then(function (token) {
+      return fetch(cloud.cfg.apiUrl + path, {
+        method: method,
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+    }).then(function (r) {
+      if (!r.ok) { var e = new Error('http'); e.status = r.status; throw e; }
+      return r.json();
+    }).catch(function (e) {
+      if (e && e.message === 'no-auth') { startLogin(); }
+      throw e;
+    });
+  }
+  function signOut() {
+    writeAuth(null);
+    localStorage.removeItem(STORAGE_KEY);
+    location.href = cloud.cfg.cognitoDomain + '/logout?client_id=' + encodeURIComponent(cloud.cfg.clientId) + '&logout_uri=' + encodeURIComponent(cloud.cfg.redirectUri);
+  }
+  function startCloud() {
+    return fetch('config.json', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
+      .then(function (cfg) {
+        if (!cfg || !cfg.clientId) throw new Error('no-config');
+        cloud = { cfg: cfg };
+        var p = new URLSearchParams(location.search), code = p.get('code');
+        if (code) {
+          return handleCallback(code, p.get('state')).then(function () { history.replaceState(null, '', location.pathname); },
+            function () { history.replaceState(null, '', location.pathname); return startLogin(); });
+        }
+        if (!readAuth()) return startLogin();
+      })
+      .then(function () { return api('GET', '/api/data'); })
+      .then(function (res) {
+        var remote = res.data ? sanitize(res.data) : null;
+        if (!remote) { return pushRemote(); }
+        if (remote.updatedAt >= state.updatedAt) {
+          state = remote;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+          $('focusMin').value = state.settings.focusMin;
+          $('breakMin').value = state.settings.breakMin;
+          if (!timer.running) timer.remaining = modeSeconds(timer.mode);
+          renderAll();
+        } else { return pushRemote(); }
+      })
+      .then(function () { $('signOutBtn').hidden = false; $('signOutBtn').textContent = t('signOut'); $('chatPanel').hidden = false; renderGoals(); renderTasks(); })
+      .catch(function (e) {
+        if (e && e.message === 'no-config') { cloud = null; return; } // local-only mode
+        if (e && e.message === 'no-auth') return;
+        syncError = true; renderError();
+      });
+  }
+  // ---------- check my work: photo review + mini exam ----------
+  var ck = null;
+  function freshCk(taskId) { return { taskId: taskId, image: null, busy: false, error: '', review: null, examBusy: false, examError: '', exam: null, answers: {}, submitted: false }; }
+  function ckTask() { return state.tasks.filter(function (x) { return x.id === ck.taskId; })[0]; }
+  // Stretch the brightness range so shadowed phone photos of paper become clearer.
+  function autoLevels(cx, w, h) {
+    try {
+      var img = cx.getImageData(0, 0, w, h), d = img.data, hist = new Uint32Array(256), i, n = w * h;
+      for (i = 0; i < d.length; i += 4) hist[(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0]++;
+      var lo = 0, hi = 255, acc = 0, cut = n * 0.01;
+      while (lo < 254 && (acc += hist[lo]) < cut) lo++;
+      acc = 0;
+      while (hi > lo + 1 && (acc += hist[hi]) < cut) hi--;
+      if (hi - lo < 40) return;
+      var k = 255 / (hi - lo);
+      for (i = 0; i < d.length; i += 4) {
+        d[i] = Math.max(0, Math.min(255, (d[i] - lo) * k));
+        d[i + 1] = Math.max(0, Math.min(255, (d[i + 1] - lo) * k));
+        d[i + 2] = Math.max(0, Math.min(255, (d[i + 2] - lo) * k));
+      }
+      cx.putImageData(img, 0, 0);
+    } catch (e) { /* keep the original pixels */ }
+  }
+  function fileToJpeg(file, maxDim, quality) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, (maxDim || 1568) / Math.max(img.width, img.height));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * scale)); c.height = Math.max(1, Math.round(img.height * scale));
+        var cx = c.getContext('2d');
+        cx.drawImage(img, 0, 0, c.width, c.height);
+        autoLevels(cx, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', quality || 0.85));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('image')); };
+      img.src = url;
+    });
+  }
+  // Task detail screen (replaces the home view; browser Back returns to the planner)
+  function refreshTaskView() {
+    var task = ckTask();
+    if (!task) return;
+    $('ckTitle').textContent = task.title;
+    $('tvMeta').textContent = taskMeta(task);
+    if (d_active() !== $('tvTitle')) $('tvTitle').value = task.title;
+    $('tvTitle').title = t('editTitle'); $('tvSubject').title = t('editSubject'); $('tvDue').title = t('editDue');
+    var subs = state.settings.subjects.indexOf(task.subject) >= 0 ? state.settings.subjects : state.settings.subjects.concat([task.subject]);
+    $('tvSubject').innerHTML = subs.map(function (n) { return '<option value="' + esc(n) + '">' + esc(subjectName(n)) + '</option>'; }).join('');
+    $('tvSubject').value = task.subject;
+    $('tvDue').value = task.due;
+    $('tvDone').checked = task.done;
+    $('tvDoneLabel').textContent = t('markDone');
+    $('tvGoalLabel').textContent = t('taskGoal');
+    $('tvGoal').innerHTML = '<option value="">' + esc(t('noGoal')) + '</option>' + state.goals.map(function (g) {
+      return '<option value="' + esc(g.id) + '">' + esc(g.title) + '</option>';
+    }).join('');
+    $('tvGoal').value = goalById(task.goalId) ? task.goalId : '';
+    $('ckHint').textContent = t('ckHint');
+    $('ckTake').textContent = t('ckTake'); $('ckChoose').textContent = t('ckChoose');
+    $('ckRun').textContent = ck.busy ? t('ckChecking') : t('ckRun');
+    $('ckClose').textContent = t('back');
+    $('ckTools').hidden = !cloud;
+    renderCheck();
+  }
+  function d_active() { return document.activeElement; }
+  function showTaskView() {
+    $('home').hidden = true; $('taskView').hidden = false;
+    window.scrollTo(0, 0);
+  }
+  function hideTaskView() {
+    $('taskView').hidden = true; $('home').hidden = false;
+  }
+  function openCheck(taskId, fromHistory) {
+    var task = state.tasks.filter(function (x) { return x.id === taskId; })[0];
+    if (!task) return;
+    ck = freshCk(taskId);
+    $('ckRun').disabled = true;
+    $('ckPreview').hidden = true; $('ckPreview').removeAttribute('src');
+    $('ckFileTake').value = ''; $('ckFileChoose').value = '';
+    refreshTaskView();
+    showTaskView();
+    if (!fromHistory) history.pushState(null, '', '#task/' + encodeURIComponent(taskId));
+  }
+  function closeTask() {
+    if (location.hash.indexOf('#task/') === 0) history.back(); else hideTaskView();
+  }
+  function onCheckFile(e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f || !ck) return;
+    ck.error = '';
+    fileToJpeg(f).then(function (dataUrl) {
+      ck.image = dataUrl.split(',')[1];
+      $('ckPreview').src = dataUrl; $('ckPreview').hidden = false;
+      $('ckRun').disabled = false;
+      renderCheck();
+    }, function () { ck.error = t('ckErr'); renderCheck(); });
+  }
+  function runReview() {
+    if (!ck || !ck.image || ck.busy) return;
+    var task = ckTask(), mine = ck;
+    ck.busy = true; ck.error = ''; ck.review = null; ck.exam = null; ck.submitted = false;
+    $('ckRun').disabled = true; $('ckRun').textContent = t('ckChecking');
+    renderCheck();
+    api('POST', '/api/ai/review', { image: ck.image, subject: subjectName(task.subject), task: task.title, lang: state.lang, level: levelLabel(state.settings.level) })
+      .then(function (res) {
+        if (res.transcription) { task.notes = res.transcription.slice(0, 4000); save(); }
+        mine.review = res;
+      })
+      .catch(function (e) { mine.error = e && e.status === 429 ? t('ckErrLimit') : t('ckErr'); })
+      .then(function () {
+        mine.busy = false;
+        if (ck !== mine) return;
+        $('ckRun').disabled = !ck.image; $('ckRun').textContent = t('ckRun'); renderCheck();
+      });
+  }
+  function examMaterial() {
+    var task = ckTask(), parts = [];
+    if (ck.review) {
+      parts.push(ck.review.transcription || '');
+      (ck.review.corrections || []).forEach(function (c) { parts.push('Correction: ' + c.fix); });
+      (ck.review.additions || []).forEach(function (a) { parts.push('Also important: ' + a); });
+    } else if (task && task.notes) {
+      parts.push(task.notes);
+    }
+    return parts.join('\n').trim();
+  }
+  function runExam() {
+    if (!ck || ck.examBusy) return;
+    var task = ckTask(), text = examMaterial(), mine = ck;
+    if (text.length < 20) return;
+    ck.examBusy = true; ck.examError = ''; ck.exam = null; ck.answers = {}; ck.submitted = false;
+    renderCheck();
+    api('POST', '/api/ai/exam', { text: text, subject: subjectName(task.subject), lang: state.lang, level: levelLabel(state.settings.level) })
+      .then(function (res) { mine.exam = res.questions || []; })
+      .catch(function (e) { mine.examError = e && e.status === 429 ? t('ckErrLimit') : t('ckExamErr'); })
+      .then(function () { mine.examBusy = false; if (ck === mine) renderCheck(); });
+  }
+  function readHtml(r) {
+    if (!r.transcription) return '';
+    return '<details style="margin-top:10px"><summary style="font-size:14px">' + esc(t('ckRead')) + '</summary>' +
+      '<div class="muted" style="white-space:pre-wrap;margin-top:6px">' + esc(r.transcription) + '</div>' +
+      '<div class="muted" style="margin-top:6px">' + esc(t('ckReadTip')) + '</div></details>';
+  }
+  function listHtml(title, items) {
+    if (!items || !items.length) return '';
+    return '<h3>' + esc(title) + '</h3><ul>' + items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul>';
+  }
+  function renderCheck() {
+    if (!ck) return;
+    var task = ckTask(), html = '';
+    if (ck.error) html += '<div class="err" style="margin-top:10px">' + esc(ck.error) + '</div>';
+    if (ck.busy) html += '<div class="muted" style="margin-top:10px">' + esc(t('ckChecking')) + '</div>';
+    if (ck.review) {
+      var r = ck.review;
+      html += '<div class="rv"><h3>' + esc(t('ckVerdict')) + '</h3><div>' + esc(r.verdict) + '</div>' + listHtml(t('ckUnclear'), r.unclear) + readHtml(r) + listHtml(t('ckRight'), r.correct);
+      if (r.corrections && r.corrections.length) {
+        html += '<h3>' + esc(t('ckFix')) + '</h3><ul>' + r.corrections.map(function (c) {
+          return '<li>' + esc(c.issue) + '<br><strong>' + esc(t('ckFixArrow')) + ':</strong> ' + esc(c.fix) + '</li>';
+        }).join('') + '</ul>';
+      }
+      html += listHtml(t('ckAdd'), r.additions) + '</div>';
+      html += '<div style="margin-top:14px"><button class="primary" id="ckDiscuss">' + esc(t('ckDiscuss')) + '</button></div>';
+    }
+    var haveMaterial = examMaterial().length >= 20;
+    if (haveMaterial) {
+      if (!ck.review && task && task.notes) html += '<div class="muted" style="margin-top:10px">' + esc(t('ckSaved')) + '</div>';
+      html += '<div style="margin-top:14px"><button class="primary" id="ckExamBtn"' + (ck.examBusy ? ' disabled' : '') + '>' +
+        esc(ck.examBusy ? t('ckExamBusy') : (ck.exam ? t('ckExamNew') : t('ckExam'))) + '</button></div>';
+    }
+    if (ck.examError) html += '<div class="err" style="margin-top:8px">' + esc(ck.examError) + '</div>';
+    if (ck.exam && ck.exam.length) {
+      var score = 0;
+      html += ck.exam.map(function (q, qi) {
+        var chosen = ck.answers[qi];
+        if (ck.submitted && chosen === q.answer) score++;
+        return '<div class="q"><strong>' + (qi + 1) + '. ' + esc(q.question) + '</strong>' + q.options.map(function (o, oi) {
+          var cls = '';
+          if (ck.submitted) cls = oi === q.answer ? ' class="ok"' : (oi === chosen ? ' class="bad"' : '');
+          return '<label' + cls + '><input type="radio" name="q' + qi + '" data-q="' + qi + '" data-o="' + oi + '"' +
+            (chosen === oi ? ' checked' : '') + (ck.submitted ? ' disabled' : '') + '> ' + esc(o) + '</label>';
+        }).join('') + (ck.submitted && q.explanation ? '<div class="why">' + esc(q.explanation) + '</div>' : '') + '</div>';
+      }).join('');
+      html += ck.submitted
+        ? '<div style="margin-top:12px"><strong>' + esc(t('ckScore', { n: score, total: ck.exam.length })) + '</strong></div>'
+        : '<div style="margin-top:12px"><button class="primary" id="ckSubmit">' + esc(t('ckSubmit')) + '</button></div>';
+    }
+    $('ckDyn').innerHTML = html;
+  }
+
+  // ---------- study tutor chat (kept in memory only, not saved) ----------
+  var chat = { msgs: [], busy: false, error: '', context: '', about: '', pending: [] };
+  var MAX_PENDING = 3, MAX_SENT_IMAGES = 4;
+  function renderPending() {
+    var box = $('chatPending');
+    box.hidden = !chat.pending.length;
+    box.innerHTML = chat.pending.map(function (b, i) {
+      return '<div class="thumb"><img alt="" src="data:image/jpeg;base64,' + b + '"><button type="button" data-pend-del="' + i + '" aria-label="' + esc(t('remove')) + '">×</button></div>';
+    }).join('');
+    $('chatAttach').disabled = chat.busy || chat.pending.length >= MAX_PENDING;
+  }
+  function addChatFiles(files) {
+    var room = MAX_PENDING - chat.pending.length, list = Array.prototype.slice.call(files || [], 0, Math.max(0, room));
+    chat.error = '';
+    return Promise.all(list.map(function (f) {
+      return fileToJpeg(f, 1568, 0.8).then(function (u) { return u.split(',')[1]; }, function () { return null; });
+    })).then(function (res) {
+      var failed = false;
+      res.forEach(function (b) { if (b) chat.pending.push(b); else failed = true; });
+      if (failed) chat.error = t('chatImgErr');
+      renderChat();
+    });
+  }
+  function chatPayloadMessages() {
+    var budget = MAX_SENT_IMAGES, out = [], recent = chat.msgs.slice(-12);
+    for (var i = recent.length - 1; i >= 0; i--) {
+      var m = recent[i], o = { role: m.role, content: m.content };
+      if (m.images && m.images.length && budget > 0) { o.images = m.images.slice(0, budget); budget -= o.images.length; }
+      out.unshift(o);
+    }
+    return out;
+  }
+  function renderChat() {
+    var html = '<div class="msg bot">' + esc(t('chatWelcome')) + '</div>';
+    if (chat.about) html += '<div class="muted" style="text-align:center">' + esc(t('chatAbout', { title: chat.about })) + '</div>';
+    chat.msgs.forEach(function (m) {
+      var imgs = (m.images || []).map(function (b) { return '<img alt="" src="data:image/jpeg;base64,' + b + '">'; }).join('');
+      html += '<div class="msg ' + (m.role === 'user' ? 'me' : 'bot') + '">' + imgs + (imgs ? '<br>' : '') + esc(m.content).replace(/\n/g, '<br>') + '</div>';
+    });
+    if (chat.busy) html += '<div class="msg bot muted">' + esc(t('chatThinking')) + '</div>';
+    if (chat.error) html += '<div class="msg errmsg">' + esc(chat.error) + '</div>';
+    $('chatLog').innerHTML = html;
+    $('chatLog').scrollTop = $('chatLog').scrollHeight;
+    $('chatSend').disabled = chat.busy;
+    renderPending();
+  }
+  function renderChatStatic() {
+    var sel = $('chatSubject'), cur = sel.value;
+    sel.innerHTML = '<option value="">' + esc(t('chatAny')) + '</option>' + state.settings.subjects.map(function (n) {
+      return '<option value="' + esc(n) + '">' + esc(subjectName(n)) + '</option>';
+    }).join('');
+    sel.value = state.settings.subjects.indexOf(cur) >= 0 ? cur : '';
+    $('chatHeading').textContent = t('chat');
+    $('chatInput').placeholder = t('chatPlaceholder');
+    $('chatSend').textContent = t('chatSend');
+    $('chatNew').textContent = t('chatNew');
+    $('chatAttach').title = t('chatAttach'); $('chatAttach').setAttribute('aria-label', t('chatAttach'));
+    renderChat();
+  }
+  function sendChat() { sendChatText($('chatInput').value.trim()); }
+  function discussWithTutor() {
+    var task = ck && ckTask();
+    if (!task || !ck.review || chat.busy || !cloud) return;
+    var r = ck.review, parts = ['Task: ' + task.title, 'Subject: ' + subjectName(task.subject)];
+    parts.push('Student\'s work (transcribed): ' + (r.transcription || '').slice(0, 2000));
+    parts.push('Review verdict: ' + (r.verdict || ''));
+    (r.corrections || []).forEach(function (c) { parts.push('Issue: ' + c.issue + ' | Correct information: ' + c.fix); });
+    (r.additions || []).forEach(function (a) { parts.push('Missing: ' + a); });
+    chat.context = parts.join('\n').slice(0, 4000);
+    chat.about = task.title;
+    chat.msgs = []; chat.error = ''; chat.pending = [];
+    $('chatSubject').value = state.settings.subjects.indexOf(task.subject) >= 0 ? task.subject : '';
+    hideTaskView();
+    if (location.hash.indexOf('#task/') === 0) history.back();
+    renderChat();
+    $('chatPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    sendChatText(t('chatOpener', { title: task.title }));
+  }
+  function sendChatText(text) {
+    var imgs = chat.pending.slice();
+    if (!text && imgs.length) text = t('chatImgDefault');
+    if (!text || chat.busy || !cloud) return;
+    chat.pending = [];
+    chat.msgs.push({ role: 'user', content: text, images: imgs });
+    if (chat.msgs.length > 40) chat.msgs = chat.msgs.slice(-40);
+    $('chatInput').value = '';
+    chat.busy = true; chat.error = ''; renderChat();
+    var subj = $('chatSubject').value;
+    api('POST', '/api/ai/chat', { messages: chatPayloadMessages(), subject: subj ? subjectName(subj) : '', lang: state.lang, level: levelLabel(state.settings.level), context: chat.context })
+      .then(function (res) { chat.msgs.push({ role: 'assistant', content: String(res.reply || '') }); })
+      .catch(function (e) { chat.error = e && e.status === 429 ? t('errChatLimit') : t('errChat'); })
+      .then(function () { chat.busy = false; renderChat(); });
+  }
+
+  function suggestSteps(goalId, btn) {
+    var g = state.goals.filter(function (x) { return x.id === goalId; })[0];
+    if (!g) return;
+    btn.disabled = true; btn.textContent = t('suggesting'); aiError = ''; renderError();
+    api('POST', '/api/ai/steps', { goal: g.title, due: g.due, lang: state.lang, existing: g.steps.map(function (s) { return s.title; }) })
+      .then(function (res) {
+        var have = g.steps.map(function (s) { return s.title.toLowerCase(); });
+        (res.steps || []).forEach(function (title) {
+          if (have.indexOf(String(title).toLowerCase()) < 0) g.steps.push({ id: uid(), title: String(title), done: false });
+        });
+        save(); renderGoals();
+      })
+      .catch(function (e) {
+        aiError = e && e.status === 429 ? t('errAiLimit') : t('errAi');
+        renderError(); renderGoals();
+      });
+  }
+
+  // ---------- sound (generated with the Web Audio API, no audio files) ----------
+  var Sound = (function () {
+    var ctx = null, master = null, current = null, cache = {};
+
+    function ensure() {
+      if (!ctx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return false;
+        ctx = new AC();
+        master = ctx.createGain();
+        master.connect(ctx.destination);
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+      return true;
+    }
+    function noiseBuffer(kind) {
+      if (cache[kind]) return cache[kind];
+      var len = Math.floor(ctx.sampleRate * 6), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0), i, w;
+      if (kind === 'white') {
+        for (i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      } else if (kind === 'pink') {
+        var b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (i = 0; i < len; i++) {
+          w = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+          b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+          d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+        }
+      } else {
+        var last = 0;
+        for (i = 0; i < len; i++) { w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; }
+      }
+      cache[kind] = buf;
+      return buf;
+    }
+    function loop(kind, h) {
+      var s = ctx.createBufferSource();
+      s.buffer = noiseBuffer(kind); s.loop = true; s.start();
+      h.nodes.push(s);
+      return s;
+    }
+    function filter(type, freq, q) {
+      var f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; if (q) f.Q.value = q; return f;
+    }
+    function gain(v) { var g = ctx.createGain(); g.gain.value = v; return g; }
+    function midi(n) { return 440 * Math.pow(2, (n - 69) / 12); }
+    function tone(type, freq, t, dur, peak, attack, dest) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(dest);
+      o.start(t); o.stop(t + dur + 0.05);
+    }
+
+    var BUILDERS = {
+      white: function (bus, h) { loop('white', h).connect(gain(0.22)).connect(bus); },
+      brown: function (bus, h) { loop('brown', h).connect(gain(0.6)).connect(bus); },
+      rain: function (bus, h) {
+        loop('white', h).connect(filter('highpass', 900)).connect(filter('lowpass', 7000)).connect(gain(0.25)).connect(bus);
+      },
+      waves: function (bus, h) {
+        var lp = filter('lowpass', 800, 0.7), swell = gain(0.5);
+        loop('pink', h).connect(lp).connect(swell).connect(bus);
+        [[0.09, 0.35], [0.14, 0.12]].forEach(function (p) {
+          var o = ctx.createOscillator(), g = gain(p[1]);
+          o.frequency.value = p[0]; o.connect(g); g.connect(swell.gain); o.start(); h.nodes.push(o);
+        });
+        var o2 = ctx.createOscillator(), g2 = gain(450);
+        o2.frequency.value = 0.09; o2.connect(g2); g2.connect(lp.frequency); o2.start(); h.nodes.push(o2);
+      },
+      fire: function (bus, h) {
+        loop('brown', h).connect(filter('lowpass', 450)).connect(gain(0.55)).connect(bus);
+        function pop() {
+          if (h.stopped) return;
+          var t = ctx.currentTime, dur = 0.02 + Math.random() * 0.09;
+          var s = ctx.createBufferSource(), bp = filter('bandpass', 700 + Math.random() * 4500, 1.2), g = ctx.createGain();
+          var amp = Math.random() < 0.15 ? 0.7 + Math.random() * 0.4 : 0.1 + Math.random() * 0.4;
+          s.buffer = noiseBuffer('white');
+          g.gain.setValueAtTime(amp, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+          s.connect(bp); bp.connect(g); g.connect(bus);
+          s.start(t, Math.random() * 5, dur + 0.02);
+          h.timeout = setTimeout(pop, 30 + Math.pow(Math.random(), 2) * 650);
+        }
+        pop();
+      },
+      elevator: function (bus, h) {
+        var out = filter('lowpass', 2200), echo = ctx.createDelay(1), fb = gain(0.3), outGain = gain(0.7);
+        echo.delayTime.value = 0.3;
+        out.connect(outGain); out.connect(echo); echo.connect(fb); fb.connect(echo); echo.connect(outGain); outGain.connect(bus);
+        var CHORDS = [[48, 52, 55, 59], [45, 52, 55, 60], [50, 53, 57, 60], [43, 50, 53, 59], [41, 48, 52, 57], [43, 50, 53, 59]];
+        var SCALE = [60, 62, 64, 67, 69, 72, 74];
+        var BAR = 3.2, STEP = 0.4;
+        var barT = ctx.currentTime + 0.1, noteT = barT, bar = 0;
+        function sched() {
+          if (h.stopped) return;
+          var until = ctx.currentTime + 1.5;
+          while (barT < until) {
+            var c = CHORDS[bar % CHORDS.length];
+            c.forEach(function (n) { tone('triangle', midi(n), barT, BAR + 0.4, 0.05, 0.3, out); });
+            tone('sine', midi(c[0] - 12), barT, 1.4, 0.12, 0.05, out);
+            barT += BAR; bar++;
+          }
+          while (noteT < until) {
+            if (Math.random() < 0.65) tone('sine', midi(SCALE[Math.floor(Math.random() * SCALE.length)]), noteT, 1.1, 0.07, 0.02, out);
+            noteT += STEP;
+          }
+        }
+        sched();
+        h.interval = setInterval(sched, 300);
+      },
+      storm: function (bus, h) {
+        BUILDERS.rain(bus, h);
+        function thunder() {
+          if (h.stopped) return;
+          var t = ctx.currentTime, dur = 3 + Math.random() * 3;
+          var s = ctx.createBufferSource(), lp = filter('lowpass', 120 + Math.random() * 100), g = ctx.createGain();
+          s.buffer = noiseBuffer('brown');
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.linearRampToValueAtTime(0.9, t + 0.3 + Math.random() * 0.6);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          s.connect(lp); lp.connect(g); g.connect(bus);
+          s.start(t, Math.random() * 2, dur + 0.1);
+          h.timeout = setTimeout(thunder, 7000 + Math.random() * 16000);
+        }
+        h.timeout = setTimeout(thunder, 2500);
+      },
+      stream: function (bus, h) {
+        loop('white', h).connect(filter('bandpass', 1800, 0.5)).connect(gain(0.2)).connect(bus);
+        loop('pink', h).connect(filter('lowpass', 500)).connect(gain(0.25)).connect(bus);
+        function bubble() {
+          if (h.stopped) return;
+          var t = ctx.currentTime, f = 500 + Math.random() * 1200, d = 0.03 + Math.random() * 0.05;
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.8, t + d);
+          g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05 + Math.random() * 0.06, t + 0.005);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+          o.connect(g); g.connect(bus); o.start(t); o.stop(t + d + 0.02);
+          h.timeout = setTimeout(bubble, 15 + Math.random() * 90);
+        }
+        bubble();
+      },
+      wind: function (bus, h) {
+        var bp = filter('bandpass', 500, 0.8), g = gain(0.5);
+        loop('pink', h).connect(bp).connect(g).connect(bus);
+        [[0.07, 300, bp.frequency], [0.11, 0.25, g.gain]].forEach(function (p) {
+          var o = ctx.createOscillator(), d = gain(p[1]);
+          o.frequency.value = p[0]; o.connect(d); d.connect(p[2]); o.start(); h.nodes.push(o);
+        });
+      },
+      birds: function (bus, h) {
+        loop('pink', h).connect(filter('lowpass', 600)).connect(gain(0.05)).connect(bus);
+        function chirp() {
+          if (h.stopped) return;
+          var t = ctx.currentTime + 0.05, base = 2200 + Math.random() * 2800, notes = 2 + Math.floor(Math.random() * 4);
+          var pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null, dest = bus;
+          if (pan) { pan.pan.value = Math.random() * 2 - 1; pan.connect(bus); dest = pan; }
+          for (var i = 0; i < notes; i++) {
+            var d = 0.06 + Math.random() * 0.08, f0 = base * (1 + Math.random() * 0.3), f1 = f0 * (Math.random() < 0.5 ? 0.7 : 1.4);
+            var o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d);
+            g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+            o.connect(g); g.connect(dest); o.start(t); o.stop(t + d + 0.02);
+            t += d + 0.04 + Math.random() * 0.05;
+          }
+          h.timeout = setTimeout(chirp, 600 + Math.random() * 3800);
+        }
+        chirp();
+      },
+      crickets: function (bus, h) {
+        [[4300, 27, 2.1], [4700, 31, 1.7]].forEach(function (c) {
+          var carrier = ctx.createOscillator(), a = gain(0.5), b = gain(0.5), out = gain(0.04);
+          carrier.frequency.value = c[0];
+          var fast = ctx.createOscillator(), fastD = gain(0.5), slow = ctx.createOscillator(), slowD = gain(0.5);
+          fast.frequency.value = c[1]; slow.type = 'square'; slow.frequency.value = c[2];
+          fast.connect(fastD); fastD.connect(a.gain); slow.connect(slowD); slowD.connect(b.gain);
+          carrier.connect(a); a.connect(b); b.connect(out); out.connect(bus);
+          [carrier, fast, slow].forEach(function (n) { n.start(); h.nodes.push(n); });
+        });
+        loop('pink', h).connect(filter('lowpass', 400)).connect(gain(0.04)).connect(bus);
+      },
+      cafe: function (bus, h) {
+        [[300, 0.35, 0.13], [700, 0.28, 0.19], [1300, 0.18, 0.23]].forEach(function (b) {
+          var bp = filter('bandpass', b[0], 0.7), g = gain(b[1]), o = ctx.createOscillator(), d = gain(b[1] * 0.6);
+          loop('pink', h).connect(bp).connect(g).connect(bus);
+          o.frequency.value = b[2]; o.connect(d); d.connect(g.gain); o.start(); h.nodes.push(o);
+        });
+        function clink() {
+          if (h.stopped) return;
+          var t = ctx.currentTime, f = 2500 + Math.random() * 2500;
+          tone('sine', f, t, 0.25, 0.03 + Math.random() * 0.03, 0.002, bus);
+          tone('sine', f * 1.5, t, 0.15, 0.015, 0.002, bus);
+          h.timeout = setTimeout(clink, 3000 + Math.random() * 7000);
+        }
+        h.timeout = setTimeout(clink, 2000);
+      },
+      piano: function (bus, h) {
+        var out = gain(0.8), echo = ctx.createDelay(1), fb = gain(0.35);
+        echo.delayTime.value = 0.42;
+        out.connect(bus); out.connect(echo); echo.connect(fb); fb.connect(echo); echo.connect(bus);
+        var SCALE = [57, 60, 62, 64, 67, 69, 72, 74, 76];
+        var last = 4;
+        function note() {
+          if (h.stopped) return;
+          var t = ctx.currentTime + 0.02;
+          last = Math.max(0, Math.min(SCALE.length - 1, last + Math.floor(Math.random() * 5) - 2));
+          var f = midi(SCALE[last]);
+          tone('triangle', f, t, 3.2, 0.1, 0.01, out);
+          tone('sine', f * 2, t, 1.6, 0.03, 0.01, out);
+          if (Math.random() < 0.25) { tone('triangle', midi(SCALE[last] - 12), t, 3.5, 0.06, 0.02, out); }
+          h.timeout = setTimeout(note, 900 + Math.random() * 2200);
+        }
+        note();
+      }
+    };
+
+    function stop() {
+      var h = current;
+      if (!h) return;
+      current = null; h.stopped = true;
+      clearTimeout(h.timeout); clearInterval(h.interval);
+      var t = ctx.currentTime;
+      h.bus.gain.cancelScheduledValues(t);
+      h.bus.gain.setValueAtTime(h.bus.gain.value, t);
+      h.bus.gain.linearRampToValueAtTime(0, t + 0.25);
+      setTimeout(function () {
+        h.nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { h.bus.disconnect(); } catch (e) {}
+      }, 350);
+    }
+    function play(id) {
+      if (!BUILDERS[id] || !ensure()) return;
+      if (current && current.id === id) return;
+      stop();
+      var bus = ctx.createGain();
+      bus.gain.setValueAtTime(0, ctx.currentTime);
+      bus.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.4);
+      bus.connect(master);
+      var h = { id: id, bus: bus, nodes: [], stopped: false };
+      current = h;
+      BUILDERS[id](bus, h);
+    }
+    function setVolume(v) { if (ensure()) master.gain.value = Math.pow(v / 100, 2); }
+    function playing() { return current ? current.id : null; }
+    return { play: play, stop: stop, setVolume: setVolume, playing: playing };
+  })();
+
+  var previewing = false;
+  function syncAudio() {
+    var want = (timer.running && timer.mode === 'focus') || previewing;
+    var id = state.settings.sound;
+    if (want && id !== 'none') {
+      Sound.setVolume(state.settings.volume);
+      Sound.play(id);
+    } else if (Sound.playing()) {
+      Sound.stop();
+    }
+  }
+
+  // ---------- timer ----------
+  var timer = { mode: 'focus', remaining: 0, running: false, handle: null, endAt: 0 };
+  function modeSeconds(mode) { return (mode === 'focus' ? state.settings.focusMin : state.settings.breakMin) * 60; }
+  function resetTimer() {
+    clearInterval(timer.handle);
+    timer.mode = 'focus'; timer.running = false; timer.remaining = modeSeconds('focus');
+    renderTimer();
+  }
+  function tick() {
+    timer.remaining = Math.max(0, Math.round((timer.endAt - Date.now()) / 1000));
+    if (timer.remaining <= 0) {
+      if (timer.mode === 'focus') {
+        var k = todayKey();
+        state.sessions[k] = (state.sessions[k] || 0) + 1;
+        save();
+        timer.mode = 'break';
+        timer.remaining = modeSeconds('break');
+        timer.endAt = Date.now() + timer.remaining * 1000;
+        renderChart(); renderSubtitle();
+      } else {
+        clearInterval(timer.handle);
+        timer.mode = 'focus'; timer.running = false; timer.remaining = modeSeconds('focus');
+      }
+    }
+    renderTimer();
+  }
+  function toggleTimer() {
+    if (timer.running) {
+      clearInterval(timer.handle); timer.running = false;
+    } else {
+      timer.running = true;
+      timer.endAt = Date.now() + timer.remaining * 1000;
+      timer.handle = setInterval(tick, 250);
+    }
+    renderTimer();
+  }
+
+  // ---------- render ----------
+  function renderError() {
+    var msgs = [];
+    if (loadError) msgs.push(t('errLoad'));
+    if (saveError) msgs.push(t('errSave'));
+    if (syncError) msgs.push(t('errSync'));
+    if (aiError) msgs.push(aiError);
+    $('storageError').textContent = msgs.join(' ');
+  }
+  function renderSubtitle() {
+    var open = state.tasks.filter(function (x) { return !x.done; }).length;
+    $('subtitle').textContent = t('subtitle', { blocks: state.sessions[todayKey()] || 0, open: open });
+  }
+  function renderTimer() {
+    var m = Math.floor(timer.remaining / 60), s = timer.remaining % 60;
+    $('clock').textContent = pad(m) + ':' + pad(s);
+    $('modeLabel').textContent = timer.mode === 'focus' ? t('focusBlock') : t('shortBreak');
+    $('startBtn').textContent = timer.running ? t('pause') : t('start');
+    var total = modeSeconds(timer.mode);
+    $('timerBar').style.width = (total ? (1 - timer.remaining / total) * 100 : 0) + '%';
+    document.title = pad(m) + ':' + pad(s) + ' · ' + t('title');
+    syncAudio();
+  }
+  function renderSound() {
+    var names = t('sounds');
+    $('soundSelect').innerHTML = SOUND_IDS.map(function (id) {
+      return '<option value="' + id + '">' + esc(names[id]) + '</option>';
+    }).join('');
+    $('soundSelect').value = state.settings.sound;
+    $('volume').value = state.settings.volume;
+    $('volume').setAttribute('aria-label', t('volume'));
+    $('previewBtn').textContent = previewing ? t('stopPreview') : t('preview');
+  }
+  function bgCss(v) {
+    if (/^#/.test(v)) return v;
+    return BACKGROUNDS.filter(function (b) { return b.id === v; })[0].css;
+  }
+  function bgIsDark(v) {
+    if (/^#/.test(v)) {
+      var r = parseInt(v.slice(1, 3), 16), g = parseInt(v.slice(3, 5), 16), b = parseInt(v.slice(5, 7), 16);
+      return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
+    }
+    return !!BACKGROUNDS.filter(function (b) { return b.id === v; })[0].dark;
+  }
+  function applyBackground() {
+    var v = state.settings.bg;
+    document.body.style.background = bgCss(v);
+    document.body.style.backgroundAttachment = 'fixed';
+    document.body.classList.toggle('dark-bg', bgIsDark(v));
+  }
+  function renderBackground() {
+    var names = t('bgNames'), cur = state.settings.bg;
+    $('bgSwatches').innerHTML = BACKGROUNDS.map(function (b) {
+      return '<button class="swatch' + (cur === b.id ? ' active' : '') + '" data-bg="' + b.id + '" style="background:' + b.css + '" title="' + esc(names[b.id]) + '" aria-label="' + esc(names[b.id]) + '"></button>';
+    }).join('');
+    if (/^#/.test(cur)) $('bgColor').value = cur;
+    applyBackground();
+  }
+  function renderSubjectSelect() {
+    var sel = $('taskSubject'), cur = sel.value;
+    sel.innerHTML = state.settings.subjects.map(function (n) {
+      return '<option value="' + esc(n) + '">' + esc(subjectName(n)) + '</option>';
+    }).join('');
+    sel.value = state.settings.subjects.indexOf(cur) >= 0 ? cur : state.settings.subjects[0];
+  }
+  function goalById(id) { return id ? state.goals.filter(function (g) { return g.id === id; })[0] : undefined; }
+  function renderGoalSelect() {
+    var opts = '<option value="">' + esc(t('noGoal')) + '</option>' + state.goals.map(function (g) {
+      return '<option value="' + esc(g.id) + '">' + esc(g.title) + '</option>';
+    }).join('');
+    var sel = $('taskGoal'), cur = sel.value;
+    sel.innerHTML = opts;
+    sel.value = goalById(cur) ? cur : '';
+    sel.title = t('taskGoal');
+  }
+  function taskMeta(x) {
+    var g = goalById(x.goalId);
+    return subjectName(x.subject) + ' · ' + x.due + (g ? ' · 🎯 ' + g.title : '');
+  }
+  function renderTasks() {
+    var list = state.tasks.slice().sort(function (a, b) {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+    });
+    if (!list.length) { $('taskList').innerHTML = '<li class="muted">' + esc(t('noTasks')) + '</li>'; return; }
+    $('taskList').innerHTML = list.map(function (x) {
+      return '<li class="task' + (x.done ? ' done' : '') + '">' +
+        '<input type="checkbox" data-task-toggle="' + esc(x.id) + '"' + (x.done ? ' checked' : '') + '>' +
+        '<div class="body"><div class="title">' + esc(x.title) + '</div>' +
+        '<div class="muted">' + esc(taskMeta(x)) + '</div></div>' +
+        '<button class="chk" data-task-open="' + esc(x.id) + '">' + esc(t('openTask')) + '</button>' +
+        '<button class="link" data-task-del="' + esc(x.id) + '">' + esc(t('del')) + '</button></li>';
+    }).join('');
+  }
+  function renderChart() {
+    var today = todayKey(), days = [], max = 1, total = 0, i;
+    for (i = 6; i >= 0; i--) {
+      var k = addDays(today, -i), p = k.split('-');
+      var n = state.sessions[k] || 0;
+      days.push({ n: n, label: t('days')[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] });
+      total += n; if (n > max) max = n;
+    }
+    $('chart').innerHTML = days.map(function (d) {
+      var h = d.n ? Math.max(8, Math.round(d.n / max * 100)) : 8;
+      return '<div class="col"><div class="n">' + d.n + '</div><div class="b' + (d.n ? '' : ' zero') + '" style="height:' + h + 'px"></div><div class="d">' + esc(d.label) + '</div></div>';
+    }).join('');
+    $('chartSummary').textContent = t('weekTotal', { n: total });
+  }
+  function countdown(due) {
+    if (!due) return '';
+    var d = dayDiff(todayKey(), due);
+    var txt = d === 0 ? t('today') : d === 1 ? t('tomorrow') : d > 1 ? t('daysLeft', { n: d }) : (d === -1 ? t('finishedAgo1') : t('finishedAgo', { n: -d }));
+    return due + ' · ' + txt;
+  }
+  function renderGoals() {
+    if (!state.goals.length) { $('goalList').innerHTML = '<div class="muted">' + esc(t('noGoals')) + '</div>'; return; }
+    $('goalList').innerHTML = state.goals.map(function (g) {
+      var done = g.steps.filter(function (s) { return s.done; }).length, total = g.steps.length;
+      var gTasks = state.tasks.filter(function (x) { return x.goalId === g.id; });
+      var tDone = gTasks.filter(function (x) { return x.done; }).length;
+      var pct = (total + gTasks.length) ? Math.round((done + tDone) / (total + gTasks.length) * 100) : 0;
+      var meta = [countdown(g.due), t('stepsDone', { done: done, total: total }), gTasks.length ? t('tasksDone', { done: tDone, total: gTasks.length }) : ''].filter(Boolean).join(' · ');
+      return '<div class="goal" data-goal="' + esc(g.id) + '">' +
+        '<div class="head"><div><h3>' + esc(g.title) + '</h3><div class="muted">' + esc(meta) + '</div></div>' +
+        '<button class="link" data-goal-del="' + esc(g.id) + '">' + esc(t('delGoal')) + '</button></div>' +
+        '<div class="bar"><div style="width:' + pct + '%"></div></div>' +
+        g.steps.map(function (s) {
+          return '<div class="step' + (s.done ? ' done' : '') + '"><input type="checkbox" data-step-toggle="' + esc(s.id) + '"' + (s.done ? ' checked' : '') + '><span>' + esc(s.title) + '</span>' +
+            '<button class="link" data-step-del="' + esc(s.id) + '">' + esc(t('remove')) + '</button></div>';
+        }).join('') +
+        '<div class="form" style="margin:8px 0 0"><input type="text" maxlength="200" data-step-input placeholder="' + esc(t('stepPlaceholder')) + '">' +
+        '<button class="secondary" data-step-add="' + esc(g.id) + '">' + esc(t('addStep')) + '</button>' +
+        (cloud ? '<button class="secondary" data-ai="' + esc(g.id) + '">✨ ' + esc(t('suggest')) + '</button>' : '') +
+        '</div>' +
+        '<h3 style="font-size:14px;margin:14px 0 4px">' + esc(t('gTasks')) + '</h3>' +
+        gTasks.map(function (x) {
+          return '<div class="step' + (x.done ? ' done' : '') + '"><input type="checkbox" data-gtask-toggle="' + esc(x.id) + '"' + (x.done ? ' checked' : '') + '>' +
+            '<span>' + esc(x.title) + ' <span class="muted">· ' + esc(x.due) + '</span></span>' +
+            '<button class="chk" data-task-open="' + esc(x.id) + '">' + esc(t('openTask')) + '</button>' +
+            '<button class="link" data-gtask-unlink="' + esc(x.id) + '">' + esc(t('unlink')) + '</button></div>';
+        }).join('') +
+        '<div class="form" style="margin:8px 0 0"><input type="text" maxlength="200" data-gtask-input placeholder="' + esc(t('gTaskPlaceholder')) + '">' +
+        '<button class="secondary" data-gtask-add="' + esc(g.id) + '">' + esc(t('addGoalTask')) + '</button></div></div>';
+    }).join('');
+  }
+  function renderSubjects() {
+    $('subjectList').innerHTML = state.settings.subjects.map(function (n, i) {
+      return '<span class="chip">' + esc(subjectName(n)) + '<button data-subj-del="' + i + '" aria-label="' + esc(t('remove')) + '">×</button></span>';
+    }).join('');
+  }
+  function renderStatic() {
+    document.documentElement.lang = state.lang;
+    $('title').textContent = t('title');
+    $('timerHeading').textContent = t('timer');
+    $('tasksHeading').textContent = t('tasks');
+    $('taskTitle').placeholder = t('taskPlaceholder');
+    $('addTaskBtn').textContent = t('addTask');
+    $('resetBtn').textContent = t('reset');
+    $('chartHeading').textContent = t('chart');
+    $('goalsHeading').textContent = t('goals');
+    $('goalTitle').placeholder = t('goalPlaceholder');
+    $('addGoalBtn').textContent = t('addGoal');
+    $('settingsHeading').textContent = t('settings');
+    $('focusLabel').textContent = t('focusLen');
+    $('breakLabel').textContent = t('breakLen');
+    $('subjectsHeading').textContent = t('subjects');
+    $('newSubject').placeholder = t('subjectPlaceholder');
+    $('addSubjectBtn').textContent = t('addSubject');
+    $('signOutBtn').textContent = t('signOut');
+    $('levelLabel').textContent = t('level');
+    $('levelSelect').innerHTML = '<option value="">' + esc(t('levelNone')) + '</option>' + LEVELS.map(function (l) {
+      return '<option value="' + l.id + '">' + esc(l.label) + '</option>';
+    }).join('');
+    $('levelSelect').value = state.settings.level;
+    $('bgHeading').textContent = t('background');
+    $('bgCustomLabel').textContent = t('bgCustom');
+    $('langEn').classList.toggle('active', state.lang === 'en');
+    $('langEs').classList.toggle('active', state.lang === 'es');
+  }
+  function renderAll() {
+    renderStatic(); renderError(); renderSubtitle(); renderTimer();
+    renderSubjectSelect(); renderGoalSelect(); renderTasks(); renderChart(); renderGoals(); renderSubjects();
+    renderSound(); renderBackground(); renderChatStatic();
+    if (ck && !$('taskView').hidden) { if (ckTask()) refreshTaskView(); else hideTaskView(); }
+  }
+
+  // ---------- actions ----------
+  function addTask() {
+    var title = $('taskTitle').value.trim();
+    if (!title) return;
+    state.tasks.push({ id: uid(), title: title, subject: $('taskSubject').value, due: $('taskDue').value || todayKey(), done: false, notes: '', goalId: $('taskGoal').value || '' });
+    $('taskTitle').value = '';
+    save(); renderTasks(); renderGoals(); renderSubtitle();
+  }
+  function addGoalTask(goalEl) {
+    var input = goalEl.querySelector('[data-gtask-input]'), title = input.value.trim();
+    if (!title) return;
+    var gid = goalEl.getAttribute('data-goal');
+    if (!goalById(gid)) return;
+    state.tasks.push({ id: uid(), title: title, subject: state.settings.subjects[0], due: todayKey(), done: false, notes: '', goalId: gid });
+    save(); renderGoals(); renderTasks(); renderSubtitle();
+  }
+  function addGoal() {
+    var title = $('goalTitle').value.trim();
+    if (!title) return;
+    state.goals.push({ id: uid(), title: title, due: $('goalDue').value || '', steps: [] });
+    $('goalTitle').value = ''; $('goalDue').value = '';
+    save(); renderGoals(); renderGoalSelect();
+  }
+  function addStep(goalEl) {
+    var input = goalEl.querySelector('[data-step-input]'), title = input.value.trim();
+    if (!title) return;
+    var g = state.goals.filter(function (x) { return x.id === goalEl.getAttribute('data-goal'); })[0];
+    if (!g) return;
+    g.steps.push({ id: uid(), title: title, done: false });
+    save(); renderGoals();
+  }
+  function addSubject() {
+    var name = $('newSubject').value.trim(), err = '';
+    if (!name) return;
+    var subs = state.settings.subjects;
+    if (subs.some(function (x) { return x.toLowerCase() === name.toLowerCase() || subjectName(x).toLowerCase() === name.toLowerCase(); })) err = t('errDup');
+    else if (subs.length >= MAX_SUBJECTS) err = t('errMax', { n: MAX_SUBJECTS });
+    $('subjectError').textContent = err;
+    if (err) return;
+    subs.push(name);
+    $('newSubject').value = '';
+    save(); renderSubjects(); renderSubjectSelect();
+  }
+  function settingsChanged() {
+    state.settings.focusMin = clamp($('focusMin').value, 1, 120);
+    state.settings.breakMin = clamp($('breakMin').value, 1, 60);
+    $('focusMin').value = state.settings.focusMin;
+    $('breakMin').value = state.settings.breakMin;
+    save(); resetTimer();
+  }
+
+  function onEnter(el, fn) { el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); fn(e); } }); }
+
+  function init() {
+    state = load();
+    $('taskDue').value = todayKey();
+    $('focusMin').value = state.settings.focusMin;
+    $('breakMin').value = state.settings.breakMin;
+    timer.remaining = modeSeconds('focus');
+
+    $('langEn').onclick = function () { state.lang = 'en'; save(); renderAll(); };
+    $('langEs').onclick = function () { state.lang = 'es'; save(); renderAll(); };
+    $('startBtn').onclick = toggleTimer;
+    $('resetBtn').onclick = resetTimer;
+    $('addTaskBtn').onclick = addTask;
+    onEnter($('taskTitle'), addTask);
+    $('addGoalBtn').onclick = addGoal;
+    onEnter($('goalTitle'), addGoal);
+    $('addSubjectBtn').onclick = addSubject;
+    onEnter($('newSubject'), addSubject);
+    $('focusMin').onchange = settingsChanged;
+    $('breakMin').onchange = settingsChanged;
+
+    $('taskList').addEventListener('change', function (e) {
+      var id = e.target.getAttribute('data-task-toggle');
+      if (!id) return;
+      state.tasks.forEach(function (x) { if (x.id === id) x.done = e.target.checked; });
+      save(); renderTasks(); renderGoals(); renderSubtitle();
+    });
+    $('taskList').addEventListener('click', function (e) {
+      var oid = e.target.getAttribute('data-task-open');
+      if (oid) { openCheck(oid); return; }
+      var id = e.target.getAttribute('data-task-del');
+      if (!id) return;
+      state.tasks = state.tasks.filter(function (x) { return x.id !== id; });
+      save(); renderTasks(); renderGoals(); renderSubtitle();
+    });
+
+    $('goalList').addEventListener('change', function (e) {
+      var tid = e.target.getAttribute('data-gtask-toggle');
+      if (tid) {
+        state.tasks.forEach(function (x) { if (x.id === tid) x.done = e.target.checked; });
+        save(); renderGoals(); renderTasks(); renderSubtitle();
+        return;
+      }
+      var id = e.target.getAttribute('data-step-toggle');
+      if (!id) return;
+      state.goals.forEach(function (g) { g.steps.forEach(function (s) { if (s.id === id) s.done = e.target.checked; }); });
+      save(); renderGoals();
+    });
+    $('goalList').addEventListener('click', function (e) {
+      var gid = e.target.getAttribute('data-goal-del'), sid = e.target.getAttribute('data-step-del'), aid = e.target.getAttribute('data-step-add');
+      var oid = e.target.getAttribute('data-task-open'), uid2 = e.target.getAttribute('data-gtask-unlink'), tadd = e.target.getAttribute('data-gtask-add');
+      if (oid) { openCheck(oid); return; }
+      if (uid2) { state.tasks.forEach(function (x) { if (x.id === uid2) x.goalId = ''; }); save(); renderGoals(); renderTasks(); return; }
+      if (tadd) { addGoalTask(e.target.closest('.goal')); return; }
+      if (gid) {
+        state.goals = state.goals.filter(function (g) { return g.id !== gid; });
+        state.tasks.forEach(function (x) { if (x.goalId === gid) x.goalId = ''; });
+        save(); renderGoals(); renderGoalSelect(); renderTasks();
+      }
+      else if (sid) { state.goals.forEach(function (g) { g.steps = g.steps.filter(function (s) { return s.id !== sid; }); }); save(); renderGoals(); }
+      else if (aid) { addStep(e.target.closest('.goal')); }
+      else if (e.target.getAttribute('data-ai')) { suggestSteps(e.target.getAttribute('data-ai'), e.target); }
+    });
+    $('goalList').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.hasAttribute('data-step-input')) { e.preventDefault(); addStep(e.target.closest('.goal')); }
+      if (e.key === 'Enter' && e.target.hasAttribute('data-gtask-input')) { e.preventDefault(); addGoalTask(e.target.closest('.goal')); }
+    });
+
+    $('subjectList').addEventListener('click', function (e) {
+      var i = e.target.getAttribute('data-subj-del');
+      if (i === null) return;
+      if (state.settings.subjects.length <= 1) { $('subjectError').textContent = t('errLast'); return; }
+      $('subjectError').textContent = '';
+      state.settings.subjects.splice(+i, 1);
+      save(); renderSubjects(); renderSubjectSelect();
+    });
+
+    $('signOutBtn').onclick = function () { if (cloud) signOut(); };
+    $('ckClose').onclick = closeTask;
+    window.addEventListener('popstate', function () {
+      if (location.hash.indexOf('#task/') === 0) openCheck(decodeURIComponent(location.hash.slice(6)), true);
+      else hideTaskView();
+    });
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    function taskEdited() { save(); refreshTaskView(); renderTasks(); renderGoals(); }
+    $('tvTitle').onchange = function () {
+      var task = ck && ckTask(); if (!task) return;
+      var v = $('tvTitle').value.trim();
+      if (!v) { $('tvTitle').value = task.title; return; }
+      task.title = v; taskEdited();
+    };
+    $('tvSubject').onchange = function () { var task = ck && ckTask(); if (!task) return; task.subject = $('tvSubject').value; taskEdited(); };
+    $('tvDue').onchange = function () {
+      var task = ck && ckTask(); if (!task) return;
+      if (!$('tvDue').value) { $('tvDue').value = task.due; return; }
+      task.due = $('tvDue').value; taskEdited();
+    };
+    $('tvDone').onchange = function () {
+      var task = ck && ckTask(); if (!task) return;
+      task.done = $('tvDone').checked; save(); renderTasks(); renderGoals(); renderSubtitle();
+    };
+    $('tvGoal').onchange = function () {
+      var task = ck && ckTask(); if (!task) return;
+      task.goalId = $('tvGoal').value; save(); $('tvMeta').textContent = taskMeta(task); renderTasks(); renderGoals();
+    };
+    $('ckTake').onclick = function () { $('ckFileTake').click(); };
+    $('ckChoose').onclick = function () { $('ckFileChoose').click(); };
+    $('ckFileTake').onchange = onCheckFile;
+    $('ckFileChoose').onchange = onCheckFile;
+    $('ckRun').onclick = runReview;
+    $('ckDyn').addEventListener('click', function (e) {
+      if (e.target.id === 'ckExamBtn') runExam();
+      else if (e.target.id === 'ckDiscuss') discussWithTutor();
+      else if (e.target.id === 'ckSubmit') { ck.submitted = true; renderCheck(); }
+    });
+    $('ckDyn').addEventListener('change', function (e) {
+      var q = e.target.getAttribute('data-q');
+      if (q !== null) ck.answers[+q] = +e.target.getAttribute('data-o');
+    });
+    $('levelSelect').onchange = function () { state.settings.level = $('levelSelect').value; save(); };
+    $('chatSend').onclick = sendChat;
+    onEnter($('chatInput'), sendChat);
+    $('chatNew').onclick = function () { chat.msgs = []; chat.error = ''; chat.context = ''; chat.about = ''; chat.pending = []; renderChat(); };
+    $('chatAttach').onclick = function () { $('chatFile').click(); };
+    $('chatFile').onchange = function () { var files = $('chatFile').files; addChatFiles(files).then(function () { $('chatFile').value = ''; }); };
+    $('chatPending').addEventListener('click', function (e) {
+      var i = e.target.getAttribute('data-pend-del');
+      if (i === null) return;
+      chat.pending.splice(+i, 1); renderChat();
+    });
+
+    $('soundSelect').onchange = function () { state.settings.sound = $('soundSelect').value; save(); syncAudio(); };
+    $('volume').oninput = function () { state.settings.volume = clamp($('volume').value, 0, 100); if (Sound.playing()) Sound.setVolume(state.settings.volume); };
+    $('volume').onchange = function () { save(); };
+    $('previewBtn').onclick = function () { previewing = !previewing; renderSound(); syncAudio(); };
+    $('bgSwatches').addEventListener('click', function (e) {
+      var id = e.target.getAttribute('data-bg');
+      if (!id) return;
+      state.settings.bg = id; save(); renderBackground();
+    });
+    $('bgColor').oninput = function () { state.settings.bg = $('bgColor').value; renderBackground(); };
+    $('bgColor').onchange = function () { save(); };
+
+    renderAll();
+    if (loadError) renderError();
+    if (location.protocol !== 'file:') startCloud();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

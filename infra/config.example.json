@@ -1,0 +1,7 @@
+{
+  "account": "123456789012",
+  "region": "eu-west-1",
+  "ownerEmail": "owner@example.com",
+  "childEmail": "student@example.com",
+  "monthlyBudgetUsd": 5
+}

@@ -1,0 +1,17 @@
+{
+  "name": "study-focus-planner",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Study planner for secondary-school students: AWS static site plus Lambda API. See docs/.",
+  "scripts": {
+    "build": "node web-next/build.mjs",
+    "test": "node tests/run.mjs",
+    "test:fast": "node tests/run.mjs --no-build"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1175.0",
+    "@aws-sdk/client-dynamodb": "^3.1175.0",
+    "@aws-sdk/client-ssm": "^3.1175.0",
+    "jsdom": "^31.0.1"
+  }
+}

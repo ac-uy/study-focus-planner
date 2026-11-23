@@ -1,0 +1,8 @@
+node_modules/
+cdk.out/
+dist/
+web-next/dist/
+web-next/sounds-src/
+.agents/
+*.log
+infra/config.local.json

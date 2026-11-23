@@ -1,0 +1,213 @@
+{
+  "rain": {
+    "file": "rain.mp3",
+    "sizeKB": 308,
+    "sources": [
+      {
+        "title": "Rain (1).ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Rain_(1).ogg"
+      }
+    ]
+  },
+  "rainwindow": {
+    "file": "rainwindow.mp3",
+    "sizeKB": 559,
+    "sources": [
+      {
+        "title": "Rain against the window.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Rain_against_the_window.ogg"
+      }
+    ]
+  },
+  "storm": {
+    "file": "storm.mp3",
+    "sizeKB": 1231,
+    "sources": [
+      {
+        "title": "Thunderstorm after hot summer day 17 minutes 01 of 04.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Thunderstorm_after_hot_summer_day_17_minutes_01_of_04.ogg"
+      }
+    ]
+  },
+  "wind": {
+    "file": "wind.mp3",
+    "sizeKB": 878,
+    "sources": [
+      {
+        "title": "Howling wind.ogg",
+        "license": "CC0",
+        "page": "https://commons.wikimedia.org/wiki/File:Howling_wind.ogg"
+      }
+    ]
+  },
+  "birds": {
+    "file": "birds.mp3",
+    "sizeKB": 990,
+    "sources": [
+      {
+        "title": "Birds singing in garden.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Birds_singing_in_garden.ogg"
+      },
+      {
+        "title": "Gentle breeze and birds singing.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Gentle_breeze_and_birds_singing.ogg"
+      },
+      {
+        "title": "Breeze birds and geese.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Breeze_birds_and_geese.ogg"
+      }
+    ]
+  },
+  "forest": {
+    "file": "forest.mp3",
+    "sizeKB": 844,
+    "sources": [
+      {
+        "title": "20090610 0 ambience.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:20090610_0_ambience.ogg"
+      }
+    ]
+  },
+  "dawn": {
+    "file": "dawn.mp3",
+    "sizeKB": 1231,
+    "sources": [
+      {
+        "title": "Dawnchorus-uk.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Dawnchorus-uk.ogg"
+      }
+    ]
+  },
+  "fountain": {
+    "file": "fountain.mp3",
+    "sizeKB": 421,
+    "sources": [
+      {
+        "title": "Fountain in toulouse.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Fountain_in_toulouse.ogg"
+      }
+    ]
+  },
+  "cafe": {
+    "file": "cafe.mp3",
+    "sizeKB": 1231,
+    "sources": [
+      {
+        "title": "Cafe ambiance.ogg",
+        "license": "CC0",
+        "page": "https://commons.wikimedia.org/wiki/File:Cafe_ambiance.ogg"
+      }
+    ]
+  },
+  "keyboard": {
+    "file": "keyboard.mp3",
+    "sizeKB": 573,
+    "sources": [
+      {
+        "title": "Computer keyboard.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Computer_keyboard.ogg"
+      }
+    ]
+  },
+  "tick": {
+    "file": "tick.mp3",
+    "sizeKB": 124,
+    "sources": [
+      {
+        "title": "Clock ticking.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Clock_ticking.ogg"
+      }
+    ]
+  },
+  "piano": {
+    "file": "piano.mp3",
+    "sizeKB": 3169,
+    "sources": [
+      {
+        "title": "Robert Schumann - scenes from childhood, op. 15 - vii. dreaming.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Robert_Schumann_-_scenes_from_childhood%2C_op._15_-_vii._dreaming.ogg"
+      },
+      {
+        "title": "Robert Schumann - scenes from childhood, op. 15 - xii. child falling asleep.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Robert_Schumann_-_scenes_from_childhood%2C_op._15_-_xii._child_falling_asleep.ogg"
+      }
+    ]
+  },
+  "satie": {
+    "file": "satie.mp3",
+    "sizeKB": 3327,
+    "sources": [
+      {
+        "title": "Satie - Gnossienne 1.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Satie_-_Gnossienne_1.ogg"
+      },
+      {
+        "title": "Gnossienne 6 (Satie).ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Gnossienne_6_(Satie).ogg"
+      }
+    ]
+  },
+  "satie2": {
+    "file": "satie2.mp3",
+    "sizeKB": 5624,
+    "sources": [
+      {
+        "title": "Gnossienne 2 (Satie).ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Gnossienne_2_(Satie).ogg"
+      },
+      {
+        "title": "Gnossienne 3 (Satie).ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Gnossienne_3_(Satie).ogg"
+      },
+      {
+        "title": "Gnossienne 4 (Satie).ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Gnossienne_4_(Satie).ogg"
+      },
+      {
+        "title": "Gnossienne 5 (Satie).ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Gnossienne_5_(Satie).ogg"
+      }
+    ]
+  },
+  "gymnopedie": {
+    "file": "gymnopedie.mp3",
+    "sizeKB": 2001,
+    "sources": [
+      {
+        "title": "Gymnopedie No. 1..ogg",
+        "license": "CC0",
+        "page": "https://commons.wikimedia.org/wiki/File:Gymnopedie_No._1..ogg"
+      }
+    ]
+  },
+  "debussy": {
+    "file": "debussy.mp3",
+    "sizeKB": 2970,
+    "sources": [
+      {
+        "title": "Clair de lune (Claude Debussy) Suite bergamasque.ogg",
+        "license": "Public domain",
+        "page": "https://commons.wikimedia.org/wiki/File:Clair_de_lune_(Claude_Debussy)_Suite_bergamasque.ogg"
+      }
+    ]
+  }
+}
