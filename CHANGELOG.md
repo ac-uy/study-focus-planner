@@ -4,7 +4,25 @@ Format: newest first. Versions are explained in `docs/process.md`.
 
 ## [Unreleased]
 
-- Planned: `docs/changes/0001-family-accounts` (parent accounts and read-only family dashboard).
+- Planned: phase 2 of family accounts (usage counts, activity tab).
+
+## [2.1.0] - 2026-11-21
+
+Family accounts, phase 1 (`docs/changes/0001-family-accounts`).
+
+### Added
+- Roles: parent and child. `GET /api/me`, `GET/POST /api/parent/children`, `GET /api/parent/children/{childSub}/data`.
+- Parent family view (read only): overview per child, child page with Summary, Study, Tasks, Grades and Goals tabs.
+- Parents can create child accounts (up to 5).
+- Notice for the child on the home page and a "Who can see my progress" card on the Design page.
+- Screen for accounts without a role.
+- App version shown in the sidebar.
+- `tools/admin.mjs` to set roles and link accounts.
+- Tests: `tests/authz.test.js`, `tests/family.test.js`.
+
+### Changed
+- The two Cognito users in the stack have a retain policy, so removing them from the template later will not delete the accounts.
+- The Lambda may create users in this user pool only.
 
 ## [2.0.0] - 2026-11-21
 

@@ -52,6 +52,7 @@ export const home = {
       <a class="btn" href="#/timer">▶ ${t('startStudying')}</a></div>
     <div class="card quote"><span>💬 <em id="quoteText">${quote}</em></span>
       <button class="btn ghost small" data-act="home.newQuote" title="${t('newQuote')}" aria-label="${t('newQuote')}">${icon('refresh')} ${t('newQuote')}</button></div>
+    ${noticeCard()}
     <div class="grid2">
       <section class="card"><h2>${t('examCountdown')}</h2><p class="muted small">${t('examCountdownSub')}</p>
         ${exams.length ? exams.slice(0, 5).map((e) => h`<div class="row-line"><span><strong>${subjectName(e.subject)}</strong>${e.title ? h`<br><span class="muted small">${e.title}</span>` : ''}</span><span class="${dayDiff(today, e.date) <= 2 ? 'hot' : ''}">${daysLeftText(dayDiff(today, e.date))}</span></div>`) : h`<p class="muted">${t('noExams')}</p>`}
@@ -91,6 +92,21 @@ export const home = {
   },
 };
 
+// A student is told, once per set of parents, who can see her progress and what they see.
+const NOTICE_KEY = 'sp2-notice';
+const parentsList = () => (net.role === 'child' && net.me && net.me.parents) || [];
+const parentsKey = () => parentsList().map((p) => p.email).sort().join(',');
+function noticeSeen() { try { return localStorage.getItem(NOTICE_KEY) === parentsKey(); } catch (e) { return false; } }
+function noticeCard() {
+  const ps = parentsList();
+  if (!ps.length || noticeSeen()) return h``;
+  return h`<section class="card notice"><h2>${icon('family')} ${t('seeTitle')}</h2>
+    <p>${t('seeWho', { names: ps.map((p) => p.name || p.email).join(', ') })}</p>
+    <p class="small">${t('seeSee')}</p><p class="small">${t('seeNot')}</p>
+    <button class="btn" data-act="home.dismissNotice">${t('seeGotIt')}</button></section>`;
+}
+
 register('home', {
+  dismissNotice() { try { localStorage.setItem(NOTICE_KEY, parentsKey()); } catch (e) { /* ignore */ } refresh(); },
   newQuote() { quoteIdx = randomIndex(quoteIdx); rememberQuote(quoteIdx); refresh(); },
 });

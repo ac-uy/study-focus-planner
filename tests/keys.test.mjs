@@ -31,6 +31,7 @@ const fam = {
   'imp.': ['alta', 'media', 'baja'], 'mode.': ['timer', 'stopwatch', 'pomodoro', 'manual', 'lightTheme', 'darkTheme', 'systemTheme'], 'period.': ['day', 'week', 'month'],
   'shape.': ['sharp', 'soft', 'rounded', 'pill'], 'sndg.': ['noise', 'nature', 'ambient', 'music', 'binaural'], 'tab.': ['goals', 'objectives', 'achievements'],
   'snd.': ['none', 'white', 'pink', 'brown', 'blue', 'violet', 'rain', 'storm', 'waves', 'stream', 'wind', 'birds', 'crickets', 'cafe', 'keyboard', 'tick', 'elevator', 'piano', 'rainwindow', 'forest', 'dawn', 'fountain', 'satie', 'satie2', 'gymnopedie', 'debussy', 'delta', 'theta', 'alpha', 'beta'],
+  'fam.tab.': ['summary', 'study', 'tasks', 'grades', 'goals'], 'fam.status.': ['done', 'overdue', 'open'],
   'subj.': ['Maths', 'Language', 'English', 'Science', 'History'],
 };
 for (const [p, ids] of Object.entries(fam)) for (const id of ids) {

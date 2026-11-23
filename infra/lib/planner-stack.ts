@@ -79,7 +79,7 @@ export class PlannerStack extends Stack {
 
     // The logical ids 'StudentUser' and 'OwnerUser' must not change: renaming one would delete and recreate that user.
     if (config.childEmail) {
-      new cognito.CfnUserPoolUser(this, 'StudentUser', {
+      const studentUser = new cognito.CfnUserPoolUser(this, 'StudentUser', {
         userPoolId: userPool.userPoolId,
         username: config.childEmail,
         desiredDeliveryMediums: ['EMAIL'],
@@ -88,9 +88,10 @@ export class PlannerStack extends Stack {
           { name: 'email_verified', value: 'true' },
         ],
       });
+      studentUser.applyRemovalPolicy(RemovalPolicy.RETAIN); // so that removing it from this file later never deletes the account
     }
 
-    new cognito.CfnUserPoolUser(this, 'OwnerUser', {
+    const ownerUser = new cognito.CfnUserPoolUser(this, 'OwnerUser', {
       userPoolId: userPool.userPoolId,
       username: config.ownerEmail,
       desiredDeliveryMediums: ['EMAIL'],
@@ -99,6 +100,7 @@ export class PlannerStack extends Stack {
         { name: 'email_verified', value: 'true' },
       ],
     });
+    ownerUser.applyRemovalPolicy(RemovalPolicy.RETAIN);
 
     const userPoolClient = userPool.addClient('WebClient', {
       generateSecret: false,
@@ -138,7 +140,7 @@ export class PlannerStack extends Stack {
       memorySize: 512,
       timeout: Duration.seconds(30),
       logRetention: logs.RetentionDays.ONE_MONTH,
-      environment: { TABLE_NAME: table.tableName, MODEL_ID: BEDROCK_MODEL_ID, REVIEW_MODEL_ID: BEDROCK_REVIEW_MODEL_ID, DAILY_AI_LIMIT, DAILY_REVIEW_LIMIT: '30', DAILY_EXAM_LIMIT: '30' },
+      environment: { USER_POOL_ID: userPool.userPoolId, TABLE_NAME: table.tableName, MODEL_ID: BEDROCK_MODEL_ID, REVIEW_MODEL_ID: BEDROCK_REVIEW_MODEL_ID, DAILY_AI_LIMIT, DAILY_REVIEW_LIMIT: '30', DAILY_EXAM_LIMIT: '30' },
     });
     table.grantReadWriteData(apiFn);
     apiFn.addToRolePolicy(new iam.PolicyStatement({
@@ -150,6 +152,9 @@ export class PlannerStack extends Stack {
         'arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0',
       ],
     }));
+
+    // Parents create child accounts from the app: the Lambda may create users in this pool, and nothing else in Cognito.
+    apiFn.addToRolePolicy(new iam.PolicyStatement({ actions: ['cognito-idp:AdminCreateUser'], resources: [userPool.userPoolArn] }));
 
     // The YouTube API key is stored by hand as a SecureString (never in code or in the template).
     apiFn.addToRolePolicy(new iam.PolicyStatement({
@@ -177,6 +182,9 @@ export class PlannerStack extends Stack {
     httpApi.addRoutes({ path: '/api/ai/cards', methods: [apigwv2.HttpMethod.POST], integration, authorizer });
     httpApi.addRoutes({ path: '/api/music/search', methods: [apigwv2.HttpMethod.POST], integration, authorizer });
     httpApi.addRoutes({ path: '/api/music/check', methods: [apigwv2.HttpMethod.POST], integration, authorizer });
+    httpApi.addRoutes({ path: '/api/me', methods: [apigwv2.HttpMethod.GET], integration, authorizer });
+    httpApi.addRoutes({ path: '/api/parent/children', methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST], integration, authorizer });
+    httpApi.addRoutes({ path: '/api/parent/children/{childSub}/data', methods: [apigwv2.HttpMethod.GET], integration, authorizer });
     httpApi.addRoutes({ path: '/api/v2', methods: [apigwv2.HttpMethod.GET], integration, authorizer });
     httpApi.addRoutes({ path: '/api/v2/{section}', methods: [apigwv2.HttpMethod.PUT], integration, authorizer });
 

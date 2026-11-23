@@ -6,6 +6,18 @@ import { register, refresh } from '../actions.js';
 import { COLORS, FONTS, SHAPE_IDS, BACKGROUNDS, applyDesign, savePhoto, removePhoto, hasPhoto } from '../theme.js';
 import { fileToJpeg } from '../image.js';
 import { settingsChanged } from '../clock.js';
+import { net } from '../api.js';
+import { icon } from '../icons.js';
+
+// The student can always see who can view her progress, and what they can and cannot see.
+function seeCard() {
+  if (!net.cloud || net.role !== 'child' || !net.me) return h``;
+  const ps = net.me.parents || [];
+  if (!ps.length) return h`<section class="card"><h2>${icon('family')} ${t('seeTitle')}</h2><p>${t('seeNobody')}</p></section>`;
+  return h`<section class="card"><h2>${icon('family')} ${t('seeTitle')}</h2>
+    <p>${t('seeWho', { names: ps.map((p) => (p.name || p.email) + ' (' + p.email + ')').join(', ') })}</p>
+    <p class="small">${t('seeSee')}</p><p class="small">${t('seeNot')}</p></section>`;
+}
 
 const ui = { error: '', photoError: '' };
 
@@ -20,6 +32,7 @@ export const design = {
   view() {
     const d = state.design, s = state.settings;
     return h`<div class="page-head"><div><h1>${t('nav.design')}</h1><p class="muted">${t('designSub')}</p></div><button class="btn ghost" data-act="design.resetDesign">↺ ${t('reset')}</button></div>
+    ${seeCard()}
     <section class="card"><h2>${t('profile')}</h2>
       <div class="form"><label class="inline">${t('yourName')} <input id="pfName" type="text" maxlength="40" value="${state.profile.name}" data-change="design.name"></label>
         <label class="inline">${t('schoolYear')} <select data-change="design.level"><option value="">${t('levelNone')}</option>${LEVELS.map((l) => h`<option value="${l.id}"${s.level === l.id ? h` selected` : ''}>${l.label}</option>`)}</select></label></div>

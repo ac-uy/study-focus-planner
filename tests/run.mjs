@@ -15,6 +15,8 @@ const SUITES = [
   { name: 'keys', file: 'tests/keys.test.mjs', expect: /all keys present/ },
   { name: 'sound', file: 'tests/sound.test.mjs', expect: /all sound tests PASS/ },
   { name: 'music', file: 'tests/music.test.js' },
+  { name: 'authz', file: 'tests/authz.test.js' },
+  { name: 'family', file: 'tests/family.test.js', expect: /all family tests PASS/ },
   { name: 'app', file: 'tests/app.test.js' },
 ];
 

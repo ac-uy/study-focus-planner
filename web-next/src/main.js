@@ -24,13 +24,21 @@ import { design } from './pages/design.js';
 import { results } from './pages/results.js';
 import { icon } from './icons.js';
 import { renderDock } from './music.js';
+import { family, addchild, noprofile } from './pages/family.js';
 
-const PAGES = [home, calendar, examweeks, plan, tasks, results, tutor, cards, notes, goals, streaks, stats, timer, timetable, history, design];
+const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
+const STUDENT_PAGES = [home, calendar, examweeks, plan, tasks, results, tutor, cards, notes, goals, streaks, stats, timer, timetable, history, design];
+const PARENT_PAGES = [family, addchild];
+// Who is signed in decides which pages exist: students get the study app, parents the family view,
+// and an account that has no role yet gets only a notice.
+const pages = () => (net.role === 'parent' ? PARENT_PAGES : net.role === 'none' ? [noprofile] : STUDENT_PAGES);
 
 function route() {
+  const list = pages();
   const parts = location.hash.replace(/^#\/?/, '').split('/');
-  const page = PAGES.find((p) => p.id === parts[0]) || home;
-  return { page, arg: parts[1] ? decodeURIComponent(parts[1]) : '' };
+  const found = list.find((p) => p.id === parts[0]);
+  const page = found || list[0];
+  return { page, arg: found && parts[1] ? decodeURIComponent(parts[1]) : '' };
 }
 
 let lastKey = '';
@@ -62,6 +70,7 @@ function refresh() {
 }
 
 function userName() {
+  if (net.role === 'parent' && net.me && net.me.name) return net.me.name;
   return state.profile.name || (net.email ? net.email.split('@')[0] : t('student'));
 }
 
@@ -69,11 +78,12 @@ function renderSide() {
   const cur = route().page.id;
   byId('side').innerHTML = h`
     <div class="brand"><span class="logo">📚</span><div><strong>${t('appName')}</strong><div class="muted small">${t('appSub')}</div></div></div>
-    <nav>${PAGES.map((p) => h`<a class="nav${p.id === cur ? ' on' : ''}" href="#/${p.id}">${icon(p.id)}<span>${t(p.titleKey)}</span></a>`)}</nav>
+    <nav>${(net.role === 'none' ? [] : pages()).map((p) => h`<a class="nav${p.id === cur ? ' on' : ''}" href="#/${p.id}">${icon(p.id)}<span>${t(p.titleKey)}</span></a>`)}</nav>
     <div class="side-foot">
       <div class="seg"><button class="chip${getLang() === 'es' ? ' on' : ''}" data-act="app.lang" data-lang="es">ES</button><button class="chip${getLang() === 'en' ? ' on' : ''}" data-act="app.lang" data-lang="en">EN</button></div>
       <div class="who"><span class="avatar">${userName().charAt(0).toUpperCase()}</span><span class="small">${userName()}</span></div>
       ${net.cloud ? h`<button class="link" data-act="app.signOut">${t('signOut')}</button>` : h`<span class="muted small">${t('localMode')}</span>`}
+      <span class="muted small" id="appVersion">v${VERSION}</span>
     </div>`.s;
 }
 

@@ -9,6 +9,12 @@ The app is used by a minor, so safety checks fail closed: if a check cannot run,
 - The app has no chat, friends, rankings or other social features, and no ads of its own.
 - The repository is public. It must contain no account ids, emails, addresses of the live site, names of people or secrets. Deployment values live in `infra/config.local.json`, which git ignores, and `tests/public.test.mjs` enforces this.
 
+## Parent access
+- Role and links are read from DynamoDB on every request, never from the token or the request body.
+- A parent can read only the children linked to them, and only through a field-by-field whitelist (see `family.md`). Data of an unlinked child answers 404, the same as a child that does not exist. A child calling a parent route gets 403.
+- Only a parent can create child accounts, at most 5 per parent. A parent cannot change a child's data.
+- The child is told on the home page and on the Design page who can see her progress and what they see.
+
 ## Music content filters (three layers)
 1. **Typed text.** A model classifies what she typed as allowed or blocked before anything is searched. Names of artists, songs and genres are allowed. Sexual or explicit requests, violence or weapons, hate, drugs or alcohol, self-harm, vulgar words and anything not about music are blocked. The text is wrapped as data and cannot change the instructions. A blocked search shows a plain message and nothing is searched.
 2. **Search.** YouTube is asked for strict safe search, Music category and embeddable videos only.

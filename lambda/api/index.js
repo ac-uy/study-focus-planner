@@ -1,11 +1,13 @@
 'use strict';
-const { DynamoDBClient, GetItemCommand, PutItemCommand, UpdateItemCommand, QueryCommand } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBClient, GetItemCommand, PutItemCommand, UpdateItemCommand, QueryCommand, TransactWriteItemsCommand } = require('@aws-sdk/client-dynamodb');
+const { CognitoIdentityProviderClient, AdminCreateUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
 const { BedrockRuntimeClient, ConverseCommand } = require('@aws-sdk/client-bedrock-runtime');
 const { SSMClient, GetParameterCommand } = require('@aws-sdk/client-ssm');
 
 const ddb = new DynamoDBClient({});
 const bedrock = new BedrockRuntimeClient({});
 const ssm = new SSMClient({});
+const cognito = new CognitoIdentityProviderClient({});
 
 const TABLE = process.env.TABLE_NAME;
 const MODEL_ID = process.env.MODEL_ID;
@@ -98,6 +100,21 @@ exports.handler = async (event) => {
 
     if (path.startsWith('/api/v2/') && method === 'PUT') {
       return await putSection(event, pk, path.slice('/api/v2/'.length));
+    }
+
+    if (path === '/api/me' && method === 'GET') {
+      return await getMe(sub);
+    }
+
+    // Parent routes. The role and the parent-child link are read from the table on every call.
+    // Nothing in the token or in the request is trusted for them.
+    if (path === '/api/parent/children' || path.startsWith('/api/parent/children/')) {
+      const parent = await requireParent(sub);
+      if (!parent) return reply(403, { error: 'forbidden' });
+      if (path === '/api/parent/children' && method === 'GET') return reply(200, { children: await childrenOf(sub) });
+      if (path === '/api/parent/children' && method === 'POST') return await createChild(event, sub, parent);
+      const m = /^\/api\/parent\/children\/([^/]+)\/data$/.exec(path);
+      if (m && method === 'GET') return await getChildData(sub, m[1]);
     }
 
     return reply(404, { error: 'not found' });
@@ -569,6 +586,156 @@ async function checkMusicLink(event) {
   try { if (!(await musicAllowed(title + ' | ' + channel, TITLE_FILTER_PROMPT))) return reply(200, { ok: false, reason: 'not allowed' }); }
   catch (e) { console.error('filter check failed', e.name); return reply(503, { error: 'check failed' }); }
   return reply(200, { ok: true, id, title, channel });
+}
+
+// ---------- family accounts: roles, links and the parent's read-only view ----------
+// PROFILE item:   USER#<sub> / PROFILE        role ('parent' | 'child'), name, email, createdAt, createdBy, lastSeen
+// Link items:     USER#<parent> / CHILD#<child>   and   USER#<child> / PARENT#<parent>   (name, email, linkedAt)
+// No route writes these except createChild below and the admin tool. The storage routes only write DATA, V2#<section> and counters.
+const USER_POOL_ID = process.env.USER_POOL_ID;
+const MAX_CHILDREN = 5;
+const LAST_SEEN_EVERY_MS = 10 * 60 * 1000;
+const SUB_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+const attrS = (item, k) => (item && item[k] && item[k].S) || '';
+const attrN = (item, k) => (item && item[k] && Number(item[k].N)) || 0;
+
+async function getProfile(sub) {
+  const res = await ddb.send(new GetItemCommand({ TableName: TABLE, Key: { pk: { S: 'USER#' + sub }, sk: { S: 'PROFILE' } } }));
+  if (!res.Item) return null;
+  const role = attrS(res.Item, 'role');
+  if (role !== 'parent' && role !== 'child') return null;
+  return { role, name: attrS(res.Item, 'name'), email: attrS(res.Item, 'email'), lastSeen: attrN(res.Item, 'lastSeen') };
+}
+async function requireParent(sub) {
+  const p = await getProfile(sub);
+  return p && p.role === 'parent' ? p : null;
+}
+async function listLinks(sub, prefix) {
+  const res = await ddb.send(new QueryCommand({
+    TableName: TABLE, KeyConditionExpression: 'pk = :pk AND begins_with(sk, :p)',
+    ExpressionAttributeValues: { ':pk': { S: 'USER#' + sub }, ':p': { S: prefix } }
+  }));
+  return (res.Items || []).map((it) => ({ sub: attrS(it, 'sk').slice(prefix.length), name: attrS(it, 'name'), email: attrS(it, 'email') }));
+}
+async function childrenOf(parentSub) {
+  const out = [];
+  for (const k of await listLinks(parentSub, 'CHILD#')) {
+    const p = await getProfile(k.sub);
+    out.push({ sub: k.sub, name: k.name || (p && p.name) || '', email: k.email, lastSeen: p ? p.lastSeen : 0 });
+  }
+  return out;
+}
+
+// Remembers when a child last opened the app, at most once every 10 minutes. Never creates a profile.
+async function touchLastSeen(sub) {
+  const now = Date.now();
+  try {
+    await ddb.send(new UpdateItemCommand({
+      TableName: TABLE, Key: { pk: { S: 'USER#' + sub }, sk: { S: 'PROFILE' } },
+      UpdateExpression: 'SET lastSeen = :now',
+      ConditionExpression: 'attribute_exists(pk) AND (attribute_not_exists(lastSeen) OR lastSeen < :old)',
+      ExpressionAttributeValues: { ':now': { N: String(now) }, ':old': { N: String(now - LAST_SEEN_EVERY_MS) } }
+    }));
+  } catch (e) {
+    if (e.name !== 'ConditionalCheckFailedException') console.error('lastSeen failed', e.name);
+  }
+}
+
+async function getMe(sub) {
+  const profile = await getProfile(sub);
+  if (!profile) return reply(403, { error: 'no profile' });
+  const out = { role: profile.role, name: profile.name, email: profile.email };
+  if (profile.role === 'parent') {
+    out.children = await childrenOf(sub);
+  } else {
+    out.parents = (await listLinks(sub, 'PARENT#')).map((p) => ({ name: p.name, email: p.email }));
+    await touchLastSeen(sub);
+  }
+  return reply(200, out);
+}
+
+async function createChild(event, parentSub, parent) {
+  let input;
+  try { input = JSON.parse(event.body || '{}'); } catch (e) { return reply(400, { error: 'invalid json' }); }
+  const name = String(input.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  const email = String(input.email || '').trim().toLowerCase();
+  if (!name || email.length > 120 || !EMAIL_RE.test(email)) return reply(400, { error: 'invalid name or email' });
+  if ((await listLinks(parentSub, 'CHILD#')).length >= MAX_CHILDREN) return reply(422, { error: 'too many children' });
+
+  let created;
+  try {
+    created = await cognito.send(new AdminCreateUserCommand({
+      UserPoolId: USER_POOL_ID, Username: email, DesiredDeliveryMediums: ['EMAIL'],
+      UserAttributes: [{ Name: 'email', Value: email }, { Name: 'email_verified', Value: 'true' }]
+    }));
+  } catch (e) {
+    if (e && (e.name === 'UsernameExistsException' || e.name === 'AliasExistsException')) return reply(409, { error: 'email already has an account' });
+    if (e && e.name === 'InvalidParameterException') return reply(400, { error: 'invalid name or email' });
+    throw e;
+  }
+  const subAttr = ((created.User && created.User.Attributes) || []).find((a) => a.Name === 'sub');
+  const childSub = subAttr && subAttr.Value;
+  if (!SUB_RE.test(childSub || '')) throw new Error('created user has no sub');
+
+  const now = String(Date.now());
+  const put = (pk, sk, extra) => ({ Put: { TableName: TABLE, ConditionExpression: 'attribute_not_exists(pk)', Item: Object.assign({ pk: { S: pk }, sk: { S: sk } }, extra) } });
+  await ddb.send(new TransactWriteItemsCommand({ TransactItems: [
+    put('USER#' + childSub, 'PROFILE', { role: { S: 'child' }, name: { S: name }, email: { S: email }, createdAt: { N: now }, createdBy: { S: parentSub } }),
+    put('USER#' + parentSub, 'CHILD#' + childSub, { name: { S: name }, email: { S: email }, linkedAt: { N: now } }),
+    put('USER#' + childSub, 'PARENT#' + parentSub, { name: { S: parent.name }, email: { S: parent.email }, linkedAt: { N: now } })
+  ] }));
+  return reply(200, { ok: true, child: { sub: childSub, name, email } });
+}
+
+// What a parent may see. Fields are copied one by one, so anything not listed here (notes, cards, task notes,
+// design, usage counters, plan, tutor text) never leaves the server, including fields added to the app later.
+const clip = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
+const finite = (v) => (typeof v === 'number' && isFinite(v) ? v : 0);
+const isDay = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+const objs = (v, max) => (Array.isArray(v) ? v.filter((x) => x && typeof x === 'object' && !Array.isArray(x)).slice(0, max) : []);
+
+function shareCore(c) {
+  c = c && typeof c === 'object' ? c : {};
+  const settings = c.settings && typeof c.settings === 'object' ? c.settings : {};
+  const timetable = {};
+  if (c.timetable && typeof c.timetable === 'object') {
+    Object.keys(c.timetable).forEach((k) => { if (/^[0-4]-[0-6]$/.test(k) && typeof c.timetable[k] === 'string') timetable[k] = clip(c.timetable[k], 40); });
+  }
+  return {
+    profile: { name: clip(c.profile && c.profile.name, 40) },
+    settings: { level: clip(settings.level, 10), subjects: (Array.isArray(settings.subjects) ? settings.subjects : []).map((s) => clip(s, 40)).filter(Boolean).slice(0, 15) },
+    tasks: objs(c.tasks, 500).map((t) => ({ id: clip(t.id, 40), title: clip(t.title, 200), subject: clip(t.subject, 40), minutes: finite(t.minutes), importance: clip(t.importance, 10), due: isDay(t.due) ? t.due : '', done: t.done === true, goalId: clip(t.goalId, 40) })),
+    exams: objs(c.exams, 200).filter((e) => isDay(e.date)).map((e) => ({ id: clip(e.id, 40), subject: clip(e.subject, 40), date: e.date, title: clip(e.title, 120) })),
+    examWeeks: objs(c.examWeeks, 50).filter((w) => isDay(w.start) && isDay(w.end)).map((w) => ({ id: clip(w.id, 40), name: clip(w.name, 60), start: w.start, end: w.end })),
+    timetable,
+    goals: objs(c.goals, 100).map((g) => ({ id: clip(g.id, 40), title: clip(g.title, 200), due: isDay(g.due) ? g.due : '', steps: objs(g.steps, 40).map((s) => ({ id: clip(s.id, 40), title: clip(s.title, 200), done: s.done === true })) })),
+    weeklyGoals: objs(c.weeklyGoals, 30).map((g) => ({ id: clip(g.id, 40), subject: clip(g.subject, 40), minutes: finite(g.minutes), period: clip(g.period, 10) })),
+    results: objs(c.results, 500).filter((r) => isDay(r.date)).map((r) => ({ id: clip(r.id, 40), subject: clip(r.subject, 40), kind: clip(r.kind, 10), title: clip(r.title, 80), date: r.date, score: finite(r.score), max: finite(r.max) || 10 }))
+  };
+}
+function shareSessions(list) {
+  return objs(list, 2000).filter((s) => isDay(s.date)).map((s) => ({ id: clip(s.id, 40), date: s.date, minutes: finite(s.minutes), mode: clip(s.mode, 12), subject: clip(s.subject, 40), title: clip(s.title, 120), ts: finite(s.ts) }));
+}
+
+async function readSection(sub, name) {
+  const res = await ddb.send(new GetItemCommand({ TableName: TABLE, Key: { pk: { S: 'USER#' + sub }, sk: { S: 'V2#' + name } } }));
+  if (!res.Item) return { data: null, updatedAt: 0 };
+  try { return { data: JSON.parse(res.Item.body.S), updatedAt: attrN(res.Item, 'updatedAt') }; } catch (e) { return { data: null, updatedAt: 0 }; }
+}
+
+async function getChildData(parentSub, childSub) {
+  if (!SUB_RE.test(childSub)) return reply(404, { error: 'not found' });
+  const link = await ddb.send(new GetItemCommand({ TableName: TABLE, Key: { pk: { S: 'USER#' + parentSub }, sk: { S: 'CHILD#' + childSub } } }));
+  if (!link.Item) return reply(404, { error: 'not found' }); // not linked: same answer as "does not exist"
+  const [core, sessions, profile] = await Promise.all([readSection(childSub, 'core'), readSection(childSub, 'sessions'), getProfile(childSub)]);
+  return reply(200, {
+    child: { sub: childSub, name: attrS(link.Item, 'name') || (profile && profile.name) || '', email: attrS(link.Item, 'email'), lastSeen: profile ? profile.lastSeen : 0 },
+    core: shareCore(core.data),
+    sessions: shareSessions(sessions.data),
+    updatedAt: { core: core.updatedAt, sessions: sessions.updatedAt }
+  });
 }
 
 // Exposed only so the prompts can be tried out in tests.

@@ -3,7 +3,12 @@ import {
   meta, SECTIONS, exportSection, applySection, setPusher, hasUserData, migrateV1, flushLocal,
 } from './store.js';
 
-export const net = { cloud: false, ready: false, syncError: false, email: '', cfg: null, onChange: () => {} };
+const ROLE_KEY = 'sp2-role';
+function storedRole() { try { const r = localStorage.getItem(ROLE_KEY); return r === 'parent' || r === 'none' ? r : 'child'; } catch (e) { return 'child'; } }
+function storeRole(r) { try { localStorage.setItem(ROLE_KEY, r); } catch (e) { /* ignore */ } }
+
+// role: 'child' (the student app), 'parent' (family view) or 'none' (account without a role). me: the answer of /api/me.
+export const net = { cloud: false, ready: false, syncError: false, email: '', cfg: null, role: storedRole(), me: null, onChange: () => {} };
 const AUTH_KEY = 'sp2-auth';
 
 function readAuth() { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch (e) { return null; } }
@@ -80,7 +85,7 @@ export async function api(method, path, body) {
 
 export function signOut() {
   writeAuth(null);
-  try { localStorage.removeItem('study-planner-v2'); } catch (e) { /* ignore */ }
+  try { localStorage.removeItem('study-planner-v2'); localStorage.removeItem(ROLE_KEY); } catch (e) { /* ignore */ }
   location.href = net.cfg.cognitoDomain + '/logout?client_id=' + encodeURIComponent(net.cfg.clientId) + '&logout_uri=' + encodeURIComponent(net.cfg.redirectUri);
 }
 
@@ -119,16 +124,34 @@ async function pullAll() {
   return changed;
 }
 
+// Asks the server who this account is. A parent gets the family view, an account without a role gets a notice,
+// and when the question cannot be answered (offline, server error) the student app keeps working as before.
+async function loadMe() {
+  try {
+    const me = await api('GET', '/api/me');
+    net.me = me; net.role = me.role === 'parent' ? 'parent' : 'child';
+  } catch (e) {
+    if (e && e.status === 403) { net.me = null; net.role = 'none'; }
+    else if (e && e.message === 'no-auth') throw e;
+    else return;
+  }
+  storeRole(net.role);
+}
+export async function reloadMe() {
+  net.me = await api('GET', '/api/me');
+  net.role = net.me.role === 'parent' ? 'parent' : 'child';
+}
+
 // Returns true when remote data replaced local data (so the caller should re-render).
 export async function startCloud() {
   if (location.protocol === 'file:') return false;
   try {
     const r = await fetch('config.json', { cache: 'no-store' });
-    if (!r.ok) return false;
+    if (!r.ok) { net.role = 'child'; return false; }
     const cfg = await r.json();
-    if (!cfg || !cfg.clientId) return false;
+    if (!cfg || !cfg.clientId) { net.role = 'child'; return false; }
     net.cfg = cfg;
-  } catch (e) { return false; }
+  } catch (e) { net.role = 'child'; return false; }
   net.cloud = true;
   const p = new URLSearchParams(location.search), code = p.get('code');
   if (code) {
@@ -138,8 +161,10 @@ export async function startCloud() {
   const auth = readAuth();
   if (!auth) { await startLogin(); return false; }
   net.email = jwtClaims(auth.idToken).email || '';
-  setPusher(schedulePush);
   try {
+    await loadMe();
+    if (net.role !== 'child') { net.ready = true; net.onChange(); return false; } // parents and accounts without a role do not sync study data
+    setPusher(schedulePush);
     const changed = await pullAll();
     net.ready = true;
     net.onChange();
