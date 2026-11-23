@@ -212,6 +212,7 @@ function installYT(w) {
       calls.push({ url, method: (opts && opts.method) || 'GET', body });
       const ok = (j) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(j) });
       if (/config\.json$/.test(url)) return ok({ clientId: 'c', cognitoDomain: 'https://x', apiUrl: 'https://api', redirectUri: 'http://localhost/next/' });
+      if (/\/api\/me$/.test(url)) return ok({ role: 'child', name: 'Student', email: 'student@example.com', parents: [] });
       if (/\/api\/v2$/.test(url)) return ok({ sections: {} });
       if (/\/api\/data$/.test(url)) return ok({ data: v1 });
       if (/\/api\/v2\//.test(url)) return ok({ ok: true });

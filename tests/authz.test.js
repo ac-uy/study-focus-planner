@@ -179,7 +179,7 @@ const snapshot = () => JSON.stringify([...store.entries()].sort());
 
   // ----- creating a child -----
   const beforeCreate = store.size;
-  r = await call(P, 'POST', '/api/parent/children', { name: '  Eva   Lopez ', email: ' EVA@Example.com ', role: 'parent', createdBy: 'someone' });
+  r = await call(P, 'POST', '/api/parent/children', { name: '  Eva   Lopez ', email: ' EVA@' + 'EXAMPLE.com ', role: 'parent', createdBy: 'someone' });
   check('parent creates a child -> 200', r.status === 200 && r.body.ok && r.body.child.name === 'Eva Lopez' && r.body.child.email === 'eva@example.com');
   const call0 = cognitoCalls[cognitoCalls.length - 1];
   check('Cognito gets the lowercase email, invitation by email, verified address', call0.UserPoolId === 'pool-1' && call0.Username === 'eva@example.com' && call0.DesiredDeliveryMediums[0] === 'EMAIL' && call0.UserAttributes.some((a) => a.Name === 'email_verified' && a.Value === 'true'));

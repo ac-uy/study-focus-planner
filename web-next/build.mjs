@@ -1,6 +1,6 @@
 // Bundles src/ into dist/ (index.html, app.js, app.css). Run before `cdk deploy`.
 import { build } from 'esbuild';
-import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,6 +16,8 @@ await build({
   format: 'iife',
   target: ['es2020'],
   outfile: join(dist, 'app.js'),
+  // The version shown in the sidebar comes from the root package.json, so it always matches the tag.
+  define: { __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(root, '..', 'package.json'), 'utf8')).version) },
   logLevel: 'info',
 });
 copyFileSync(join(root, 'src', 'styles.css'), join(dist, 'app.css'));

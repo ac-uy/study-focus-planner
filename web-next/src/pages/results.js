@@ -19,8 +19,10 @@ function stat(label, value, sub, c) {
   return h`<div class="card stat"><div class="stat-h"><span>${label}</span></div><div class="stat-v ${c || ''}">${value}</div><div class="muted small">${sub}</div></div>`;
 }
 
-function trendChart(sums) {
-  const shown = ui.focus ? sums.filter((s) => s.subject === ui.focus) : sums;
+// opts.focus: show one subject only. opts.staticLegend: legend without buttons (used by the parent view).
+export function trendChart(sums, opts = {}) {
+  const focus = opts.focus !== undefined ? opts.focus : ui.focus;
+  const shown = focus ? sums.filter((s) => s.subject === focus) : sums;
   const all = shown.flatMap((s) => s.list);
   if (!all.length) return h``;
   const W = 600, H = 226, x0 = 34, x1 = 588, y0 = 12, y1 = 196;
@@ -38,7 +40,7 @@ function trendChart(sums) {
       return h`${pts.length > 1 ? h`<polyline fill="none" stroke="${color}" stroke-width="2.5" points="${pts.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"/>` : ''}
         ${pts.map((p) => h`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="${color}"><title>${subjectName(s.subject)} · ${t('kind.' + p[2].kind)} · ${num(p[2].score)}/${num(p[2].max)}</title></circle>`)}`;
     })}</svg>
-    <div class="legend-row">${sums.map((s, i) => h`<button class="chip${ui.focus === s.subject ? ' on' : ''}" data-act="results.focus" data-subject="${s.subject}"><i style="background:${COLORS[i % COLORS.length]}"></i>${subjectName(s.subject)}</button>`)}</div>`;
+    <div class="legend-row">${sums.map((s, i) => opts.staticLegend ? h`<span class="chip"><i style="background:${COLORS[i % COLORS.length]}"></i>${subjectName(s.subject)}</span>` : h`<button class="chip${focus === s.subject ? ' on' : ''}" data-act="results.focus" data-subject="${s.subject}"><i style="background:${COLORS[i % COLORS.length]}"></i>${subjectName(s.subject)}</button>`)}</div>`;
 }
 
 export const results = {
