@@ -1,6 +1,6 @@
 # 0001 Family accounts
 
-- **Status:** proposed (waiting for the owner's answers to the open decisions)
+- **Status:** in progress (approved 2026-11-21, phase 1)
 - **Target versions:** 2.1.0 (phase 1), 2.2.0 (phase 2)
 - **Touches specs:** `accounts-sync.md`, `safety-costs.md`, new `family.md`, `design-i18n.md` (child notice)
 
@@ -42,6 +42,8 @@ Account facts today: the pool has one child account and one parent account, both
 | 3 | Does the child see a notice? | Yes: on her Design page and once at her next sign-in |
 | 4 | Does the parent account also keep a personal planner? | No. The family view only. Their existing planner data is left untouched |
 | 5 | Add a second parent now? | Not now. The admin script can do it later |
+
+**Answer from the owner:** defaults for all five decisions. Logging music searches (phase 2) stays off until the owner says yes.
 
 ## Design
 
