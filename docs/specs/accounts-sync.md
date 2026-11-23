@@ -23,4 +23,7 @@ Name and school year (profile), subjects, timer lengths, design. Her background 
 `tests/app.test.js`: import from v1, sync pushes, token handling in the sign-in flow.
 
 ## Known gaps
-No conflict merge inside a section. No way to export or delete her own data from the app. Roles and parent access do not exist yet (change 0001).
+No conflict merge inside a section. No way to export or delete her own data from the app. Roles are described in `family.md`.
+
+## Roles (since 2.1.0)
+After sign-in the app asks `/api/me`. A child gets the study app and syncs as before. A parent gets the family view and does not sync study data. An account with no profile gets a notice and nothing else. If `/api/me` fails with a server error or offline, the student app keeps working. The role is cached in local storage (`sp2-role`) only to avoid a flash of the wrong menu; the server decides.

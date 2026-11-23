@@ -1,6 +1,6 @@
 {
   "name": "study-focus-planner",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Study planner for secondary-school students: AWS static site plus Lambda API. See docs/.",
   "scripts": {
