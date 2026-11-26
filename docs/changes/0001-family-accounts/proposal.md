@@ -1,6 +1,6 @@
 # 0001 Family accounts
 
-- **Status:** in progress (approved 2026-11-21, phase 1)
+- **Status:** phase 1 shipped in v2.1.0 (approved 2026-11-21); phase 2 planned
 - **Target versions:** 2.1.0 (phase 1), 2.2.0 (phase 2)
 - **Touches specs:** `accounts-sync.md`, `safety-costs.md`, new `family.md`, `design-i18n.md` (child notice)
 
