@@ -44,7 +44,8 @@ function makeDom(role, opts = {}) {
     if (/\/api\/me$/.test(url)) {
       if (role === 'none') return bad(403);
       if (role === 'error') return bad(500);
-      if (role === 'parent') return ok({ role: 'parent', name: 'Parent', email: 'parent@example.com', children: w.__children || [{ sub: KID, name: 'Kid One', email: 'kid@example.com', lastSeen: Date.now() - 5 * 60000 }] });
+      if (role === 'viewer') return ok({ role: 'parent', admin: false, name: 'Viewer', email: 'viewer@example.com', children: [{ sub: KID, name: 'Kid One', email: 'kid@example.com', lastSeen: 0 }] });
+      if (role === 'parent') return ok({ role: 'parent', admin: true, adults: w.__adults || [], name: 'Parent', email: 'parent@example.com', children: w.__children || [{ sub: KID, name: 'Kid One', email: 'kid@example.com', lastSeen: Date.now() - 5 * 60000 }] });
       return ok({ role: 'child', name: 'Kid', email: 'kid@example.com', parents: [{ name: 'Parent', email: 'parent@example.com' }] });
     }
     if (/\/api\/parent\/children$/.test(url) && method === 'POST') {
@@ -52,6 +53,12 @@ function makeDom(role, opts = {}) {
       if (/dup/.test(b.email)) return bad(409);
       w.__children = [{ sub: KID, name: 'Kid One', email: 'kid@example.com', lastSeen: 0 }, { sub: 'bbbbbbbb-1111-2222-3333-44444444444a', name: b.name, email: b.email, lastSeen: 0 }];
       return ok({ child: { sub: 'bbbbbbbb-1111-2222-3333-44444444444a', name: b.name, email: b.email } });
+    }
+    if (/\/api\/parent\/adults$/.test(url) && method === 'POST') {
+      const b = JSON.parse(o.body);
+      if (/dup/.test(b.email)) return bad(409);
+      w.__adults = [{ sub: 'cccccccc-1111-2222-3333-44444444444a', name: b.name, email: b.email }];
+      return ok({ ok: true, adult: { name: b.name, email: b.email }, children: 1 });
     }
     if (/\/api\/parent\/children\/[^/]+\/data$/.test(url)) return ok(CHILD_DATA);
     if (/\/api\/v2$/.test(url)) return ok({ sections: {} });
@@ -77,7 +84,7 @@ const syncCalls = (calls) => calls.filter((c) => /\/api\/(v2|data)(\/|$)/.test(c
     {
       const { w, calls } = makeDom('parent');
       await sleep(400);
-      check('parent: nav has only family and add-child', $$(w, 'a.nav').length === 2);
+      check('parent: nav has family, add-child and add-adult', $$(w, 'a.nav').length === 3);
       check('parent: lands on the family page', /Kid One/.test(text(w)) && /Familia/.test(text(w)));
       check('parent: no study data sync calls', syncCalls(calls).length === 0);
       const dataCalls = () => calls.filter((c) => /\/data$/.test(c.url) && /parent\/children/.test(c.url)).length;
@@ -123,9 +130,37 @@ const syncCalls = (calls) => calls.filter((c) => /\/api\/(v2|data)(\/|$)/.test(c
       click(w, $(w, '[data-act="family.add"]'));
       await sleep(40);
       check('parent: empty name is rejected before calling the server', /nombre y un correo válido/.test(text(w)) && calls.filter((c) => c.method === 'POST').length === 2);
+      await go(w, '#/addadult');
+      check('parent: add-adult page renders with empty list', /Añadir otro adulto/.test(text(w)) && /Todavía no has añadido/.test(text(w)));
+      const an = $(w, '#adName'), ae = $(w, '#adEmail');
+      an.value = 'Ana'; an.dispatchEvent(new w.Event('input', { bubbles: true }));
+      ae.value = 'ana@example.com'; ae.dispatchEvent(new w.Event('input', { bubbles: true }));
+      click(w, $(w, '[data-act="family.addAdult"]'));
+      await sleep(80);
+      check('parent: add adult success message and listed', /Invitación enviada a ana@example\.com/.test(text(w)) && /Ana/.test(text(w)));
+      const ae2 = $(w, '#adEmail'), an2 = $(w, '#adName');
+      an2.value = 'Dup'; an2.dispatchEvent(new w.Event('input', { bubbles: true }));
+      ae2.value = 'dup@example.com'; ae2.dispatchEvent(new w.Event('input', { bubbles: true }));
+      click(w, $(w, '[data-act="family.addAdult"]'));
+      await sleep(80);
+      check('parent: duplicate adult email shows a clear error', /ya tiene una cuenta/.test(text(w)));
       check('parent: still no study data sync calls', syncCalls(calls).length === 0);
       check('parent: no script errors', w.__errors.length === 0);
       if (w.__errors.length) console.log('parent errors:', w.__errors.join(' | '));
+    }
+
+    // ---------- added adult (parent who is not the family admin) ----------
+    {
+      const { w, calls } = makeDom('viewer');
+      await sleep(400);
+      check('viewer: nav has only the family page', $$(w, 'a.nav').length === 1 && /Kid One/.test(text(w)));
+      check('viewer: no add-child button in the page', !$(w, 'a[href="#/addchild"]'));
+      await go(w, '#/addchild');
+      check('viewer: add-child route falls back to family', !$(w, '#acName') && /Familia/.test(text(w)));
+      await go(w, '#/addadult');
+      check('viewer: add-adult route falls back to family', !$(w, '#adName'));
+      check('viewer: no study data sync and no POST', syncCalls(calls).length === 0 && !calls.some((c) => c.method === 'POST'));
+      check('viewer: no script errors', w.__errors.length === 0);
     }
 
     // ---------- child ----------

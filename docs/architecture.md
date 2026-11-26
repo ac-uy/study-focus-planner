@@ -42,6 +42,7 @@ Region and account come from `infra/config.local.json` (not in the repository). 
 | `POST /api/music/check` | check a pasted YouTube link |
 | `GET /api/me` | role and links of the signed-in account (children for a parent, parents for a child) |
 | `GET/POST /api/parent/children` | parent only: list linked children, create a child account |
+| `GET/POST /api/parent/adults` | family admin only: list or add other adults (read-only parents) |
 | `GET /api/parent/children/{childSub}/data` | parent only: read-only, filtered copy of one linked child's data |
 
 Throttle: 5 requests per second, burst 10. Lambda: 512 MB, 30 s.
@@ -54,6 +55,7 @@ Throttle: 5 requests per second, burst 10. Lambda: 512 MB, 30 s.
 | `USER#<sub>` | `V2#core`, `V2#notes`, `V2#cards`, `V2#sessions` | `body` (JSON string), `updatedAt` (ms) |
 | `USER#<sub>` | `PROFILE` | role (`parent` or `child`), name, email, createdAt, createdBy, lastSeen |
 | `USER#<parent>` / `USER#<child>` | `CHILD#<child>` / `PARENT#<parent>` | the two sides of a parent-child link |
+| `USER#<admin>` | `ADULT#<adult>` | an adult added by the admin (the adult's PROFILE has `addedBy`) |
 | `USER#<sub>` | `AI#<date>`, `CHAT#<date>`, `REVIEW#<date>`, `EXAM#<date>`, `CARDS#<date>` | daily usage counter `calls`, expires after 3 days |
 
 Each section is capped at 360 KB on the server (300 KB in the app). The newest `updatedAt` wins per section.

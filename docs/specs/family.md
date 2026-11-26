@@ -16,7 +16,13 @@ Study minutes and sessions, streak, tasks, exams, exam weeks, grades with trends
 
 Not shared: notes, flashcards, tutor conversations, photos, the plan, design choices and usage counters. The server copies each shared field one by one with length limits (`shareCore`, `shareSessions`), so a new field in the child's data is not shared until it is added there.
 
+## Other adults (since 2.2.0, change 0002)
+- The family admin is a parent without `addedBy` in the profile. The admin can add up to 4 other adults ("Add an adult": name and email, Cognito invitation). Duplicate email answers 409.
+- An added adult is a parent who can only look: no creating children, no adding adults. They are linked to all the admin's children now and to children created later (`USER#<admin>/ADULT#<adult>` records who was added).
+- Children see added adults in their notice. Removing an adult is done with the admin tool.
+
 ## Pages (parent)
+- Menu: Family, Add a child and Add an adult for the admin. An added adult sees only Family.
 - Family: one card per child with the week's figures and the top attention items. Data per child is loaded once and reused for 60 seconds.
 - Child page: tabs Summary, Study, Tasks, Grades, Goals. Everything is read only.
 - Add a child: name and email. The child receives the Cognito invitation email.
@@ -31,4 +37,4 @@ Unlinked child data: 404. A child on a parent route: 403. A parent without child
 `tests/authz.test.js` (every route against child, parent, unlinked parent, no profile and crafted bodies) and `tests/family.test.js` (both roles, no-profile and `/api/me` failure in the browser).
 
 ## Known gaps
-One parent per child can be linked from the app only at creation; adding a second parent needs the admin tool. No usage counts or activity log yet (phase 2, v2.2.0).
+Adults cannot be removed from the app. No usage counts or activity log yet (phase 2 of change 0001, now planned for v2.3.0).

@@ -12,7 +12,8 @@ The app is used by a minor, so safety checks fail closed: if a check cannot run,
 ## Parent access
 - Role and links are read from DynamoDB on every request, never from the token or the request body.
 - A parent can read only the children linked to them, and only through a field-by-field whitelist (see `family.md`). Data of an unlinked child answers 404, the same as a child that does not exist. A child calling a parent route gets 403.
-- Only a parent can create child accounts, at most 5 per parent. A parent cannot change a child's data.
+- Only the family admin (a parent not added by another parent) can create child accounts (at most 5) and add other adults (at most 4). Added adults can only read.
+- A parent cannot change a child's data.
 - The child is told on the home page and on the Design page who can see her progress and what they see.
 
 ## Music content filters (three layers)

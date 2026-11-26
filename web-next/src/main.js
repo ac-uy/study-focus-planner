@@ -24,14 +24,15 @@ import { design } from './pages/design.js';
 import { results } from './pages/results.js';
 import { icon } from './icons.js';
 import { renderDock } from './music.js';
-import { family, addchild, noprofile } from './pages/family.js';
+import { family, addchild, addadult, noprofile } from './pages/family.js';
 
 const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 const STUDENT_PAGES = [home, calendar, examweeks, plan, tasks, results, tutor, cards, notes, goals, streaks, stats, timer, timetable, history, design];
-const PARENT_PAGES = [family, addchild];
+const PARENT_PAGES = [family, addchild, addadult];
+const VIEWER_PAGES = [family]; // an adult added by the family admin only looks
 // Who is signed in decides which pages exist: students get the study app, parents the family view,
 // and an account that has no role yet gets only a notice.
-const pages = () => (net.role === 'parent' ? PARENT_PAGES : net.role === 'none' ? [noprofile] : STUDENT_PAGES);
+const pages = () => (net.role === 'parent' ? (net.me && net.me.admin === false ? VIEWER_PAGES : PARENT_PAGES) : net.role === 'none' ? [noprofile] : STUDENT_PAGES);
 
 function route() {
   const list = pages();

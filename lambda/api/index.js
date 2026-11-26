@@ -112,9 +112,17 @@ exports.handler = async (event) => {
       const parent = await requireParent(sub);
       if (!parent) return reply(403, { error: 'forbidden' });
       if (path === '/api/parent/children' && method === 'GET') return reply(200, { children: await childrenOf(sub) });
-      if (path === '/api/parent/children' && method === 'POST') return await createChild(event, sub, parent);
+      if (path === '/api/parent/children' && method === 'POST') return parent.admin ? await createChild(event, sub, parent) : reply(403, { error: 'forbidden' });
       const m = /^\/api\/parent\/children\/([^/]+)\/data$/.exec(path);
       if (m && method === 'GET') return await getChildData(sub, m[1]);
+    }
+
+    // Adults of the family: only the family admin (a parent not added by another parent) can list or add them.
+    if (path === '/api/parent/adults') {
+      const admin = await requireAdmin(sub);
+      if (!admin) return reply(403, { error: 'forbidden' });
+      if (method === 'GET') return reply(200, { adults: await listLinks(sub, 'ADULT#') });
+      if (method === 'POST') return await createAdult(event, sub, admin);
     }
 
     return reply(404, { error: 'not found' });
@@ -591,9 +599,11 @@ async function checkMusicLink(event) {
 // ---------- family accounts: roles, links and the parent's read-only view ----------
 // PROFILE item:   USER#<sub> / PROFILE        role ('parent' | 'child'), name, email, createdAt, createdBy, lastSeen
 // Link items:     USER#<parent> / CHILD#<child>   and   USER#<child> / PARENT#<parent>   (name, email, linkedAt)
-// No route writes these except createChild below and the admin tool. The storage routes only write DATA, V2#<section> and counters.
+// Adult items:    USER#<admin> / ADULT#<adult>   (name, email, linkedAt); the adult's PROFILE has addedBy = admin
+// No route writes these except createChild and createAdult below and the admin tool. The storage routes only write DATA, V2#<section> and counters.
 const USER_POOL_ID = process.env.USER_POOL_ID;
 const MAX_CHILDREN = 5;
+const MAX_ADULTS = 4;
 const LAST_SEEN_EVERY_MS = 10 * 60 * 1000;
 const SUB_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -606,11 +616,16 @@ async function getProfile(sub) {
   if (!res.Item) return null;
   const role = attrS(res.Item, 'role');
   if (role !== 'parent' && role !== 'child') return null;
-  return { role, name: attrS(res.Item, 'name'), email: attrS(res.Item, 'email'), lastSeen: attrN(res.Item, 'lastSeen') };
+  // A parent created from the app by another parent has addedBy set. Only a parent without it manages the family.
+  return { role, name: attrS(res.Item, 'name'), email: attrS(res.Item, 'email'), lastSeen: attrN(res.Item, 'lastSeen'), admin: role === 'parent' && !attrS(res.Item, 'addedBy') };
 }
 async function requireParent(sub) {
   const p = await getProfile(sub);
   return p && p.role === 'parent' ? p : null;
+}
+async function requireAdmin(sub) {
+  const p = await requireParent(sub);
+  return p && p.admin ? p : null;
 }
 async function listLinks(sub, prefix) {
   const res = await ddb.send(new QueryCommand({
@@ -649,6 +664,8 @@ async function getMe(sub) {
   const out = { role: profile.role, name: profile.name, email: profile.email };
   if (profile.role === 'parent') {
     out.children = await childrenOf(sub);
+    out.admin = profile.admin;
+    if (profile.admin) out.adults = (await listLinks(sub, 'ADULT#')).map((a) => ({ sub: a.sub, name: a.name, email: a.email }));
   } else {
     out.parents = (await listLinks(sub, 'PARENT#')).map((p) => ({ name: p.name, email: p.email }));
     await touchLastSeen(sub);
@@ -656,14 +673,18 @@ async function getMe(sub) {
   return reply(200, out);
 }
 
-async function createChild(event, parentSub, parent) {
+// Reads {name, email} from the body. Returns { name, email } or { error: <reply> }.
+function readNameEmail(event) {
   let input;
-  try { input = JSON.parse(event.body || '{}'); } catch (e) { return reply(400, { error: 'invalid json' }); }
-  const name = String(input.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
-  const email = String(input.email || '').trim().toLowerCase();
-  if (!name || email.length > 120 || !EMAIL_RE.test(email)) return reply(400, { error: 'invalid name or email' });
-  if ((await listLinks(parentSub, 'CHILD#')).length >= MAX_CHILDREN) return reply(422, { error: 'too many children' });
+  try { input = JSON.parse(event.body || '{}'); } catch (e) { return { error: reply(400, { error: 'invalid json' }) }; }
+  const name = String((input && input.name) || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  const email = String((input && input.email) || '').trim().toLowerCase();
+  if (!name || email.length > 120 || !EMAIL_RE.test(email)) return { error: reply(400, { error: 'invalid name or email' }) };
+  return { name, email };
+}
 
+// Creates the Cognito user (invitation email). Returns { sub } or { error: <reply> }.
+async function createCognitoUser(email) {
   let created;
   try {
     created = await cognito.send(new AdminCreateUserCommand({
@@ -671,21 +692,62 @@ async function createChild(event, parentSub, parent) {
       UserAttributes: [{ Name: 'email', Value: email }, { Name: 'email_verified', Value: 'true' }]
     }));
   } catch (e) {
-    if (e && (e.name === 'UsernameExistsException' || e.name === 'AliasExistsException')) return reply(409, { error: 'email already has an account' });
-    if (e && e.name === 'InvalidParameterException') return reply(400, { error: 'invalid name or email' });
+    if (e && (e.name === 'UsernameExistsException' || e.name === 'AliasExistsException')) return { error: reply(409, { error: 'email already has an account' }) };
+    if (e && e.name === 'InvalidParameterException') return { error: reply(400, { error: 'invalid name or email' }) };
     throw e;
   }
   const subAttr = ((created.User && created.User.Attributes) || []).find((a) => a.Name === 'sub');
-  const childSub = subAttr && subAttr.Value;
-  if (!SUB_RE.test(childSub || '')) throw new Error('created user has no sub');
+  const sub = subAttr && subAttr.Value;
+  if (!SUB_RE.test(sub || '')) throw new Error('created user has no sub');
+  return { sub };
+}
+
+const putNew = (pk, sk, extra) => ({ Put: { TableName: TABLE, ConditionExpression: 'attribute_not_exists(pk)', Item: Object.assign({ pk: { S: pk }, sk: { S: sk } }, extra) } });
+
+// The family admin adds another adult. The adult becomes a parent (read only, cannot add anyone) and is linked to every
+// child the admin has now. Children created later are linked to the adults too (see createChild).
+async function createAdult(event, adminSub, admin) {
+  const v = readNameEmail(event);
+  if (v.error) return v.error;
+  if ((await listLinks(adminSub, 'ADULT#')).length >= MAX_ADULTS) return reply(422, { error: 'too many adults' });
+  const kids = await listLinks(adminSub, 'CHILD#');
+  const u = await createCognitoUser(v.email);
+  if (u.error) return u.error;
+  const now = String(Date.now());
+  const items = [
+    putNew('USER#' + u.sub, 'PROFILE', { role: { S: 'parent' }, name: { S: v.name }, email: { S: v.email }, createdAt: { N: now }, createdBy: { S: adminSub }, addedBy: { S: adminSub } }),
+    putNew('USER#' + adminSub, 'ADULT#' + u.sub, { name: { S: v.name }, email: { S: v.email }, linkedAt: { N: now } })
+  ];
+  kids.forEach((k) => {
+    items.push(putNew('USER#' + u.sub, 'CHILD#' + k.sub, { name: { S: k.name }, email: { S: k.email }, linkedAt: { N: now } }));
+    items.push(putNew('USER#' + k.sub, 'PARENT#' + u.sub, { name: { S: v.name }, email: { S: v.email }, linkedAt: { N: now } }));
+  });
+  await ddb.send(new TransactWriteItemsCommand({ TransactItems: items }));
+  return reply(200, { ok: true, adult: { sub: u.sub, name: v.name, email: v.email }, children: kids.length });
+}
+
+async function createChild(event, parentSub, parent) {
+  const v = readNameEmail(event);
+  if (v.error) return v.error;
+  const { name, email } = v;
+  if ((await listLinks(parentSub, 'CHILD#')).length >= MAX_CHILDREN) return reply(422, { error: 'too many children' });
+  const adults = await listLinks(parentSub, 'ADULT#');
+
+  const u = await createCognitoUser(email);
+  if (u.error) return u.error;
+  const childSub = u.sub;
 
   const now = String(Date.now());
-  const put = (pk, sk, extra) => ({ Put: { TableName: TABLE, ConditionExpression: 'attribute_not_exists(pk)', Item: Object.assign({ pk: { S: pk }, sk: { S: sk } }, extra) } });
-  await ddb.send(new TransactWriteItemsCommand({ TransactItems: [
-    put('USER#' + childSub, 'PROFILE', { role: { S: 'child' }, name: { S: name }, email: { S: email }, createdAt: { N: now }, createdBy: { S: parentSub } }),
-    put('USER#' + parentSub, 'CHILD#' + childSub, { name: { S: name }, email: { S: email }, linkedAt: { N: now } }),
-    put('USER#' + childSub, 'PARENT#' + parentSub, { name: { S: parent.name }, email: { S: parent.email }, linkedAt: { N: now } })
-  ] }));
+  const items = [
+    putNew('USER#' + childSub, 'PROFILE', { role: { S: 'child' }, name: { S: name }, email: { S: email }, createdAt: { N: now }, createdBy: { S: parentSub } }),
+    putNew('USER#' + parentSub, 'CHILD#' + childSub, { name: { S: name }, email: { S: email }, linkedAt: { N: now } }),
+    putNew('USER#' + childSub, 'PARENT#' + parentSub, { name: { S: parent.name }, email: { S: parent.email }, linkedAt: { N: now } })
+  ];
+  adults.forEach((a) => {
+    items.push(putNew('USER#' + a.sub, 'CHILD#' + childSub, { name: { S: name }, email: { S: email }, linkedAt: { N: now } }));
+    items.push(putNew('USER#' + childSub, 'PARENT#' + a.sub, { name: { S: a.name }, email: { S: a.email }, linkedAt: { N: now } }));
+  });
+  await ddb.send(new TransactWriteItemsCommand({ TransactItems: items }));
   return reply(200, { ok: true, child: { sub: childSub, name, email } });
 }
 

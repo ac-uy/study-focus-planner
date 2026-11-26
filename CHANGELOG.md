@@ -4,7 +4,19 @@ Format: newest first. Versions are explained in `docs/process.md`.
 
 ## [Unreleased]
 
-- Planned: phase 2 of family accounts (usage counts, activity tab).
+- Planned: phase 2 of family accounts (usage counts, activity tab), now v2.3.0.
+
+## [2.2.0] - 2026-11-21
+
+Other adults in the family (`docs/changes/0002-family-adults`).
+
+### Added
+- The family admin can add other adults ("Add an adult"). They see all the admin's children, read only.
+- `GET/POST /api/parent/adults`; `GET /api/me` returns `admin` and the added adults.
+
+### Changed
+- Creating child accounts now needs the family admin; an added adult cannot create children or adults.
+- The Lambda stays within the same Cognito permission (create users in this pool).
 
 ## [2.1.0] - 2026-11-21
 

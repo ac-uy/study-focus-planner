@@ -184,7 +184,8 @@ export class PlannerStack extends Stack {
     httpApi.addRoutes({ path: '/api/music/check', methods: [apigwv2.HttpMethod.POST], integration, authorizer });
     httpApi.addRoutes({ path: '/api/me', methods: [apigwv2.HttpMethod.GET], integration, authorizer });
     httpApi.addRoutes({ path: '/api/parent/children', methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST], integration, authorizer });
-    httpApi.addRoutes({ path: '/api/parent/children/{childSub}/data', methods: [apigwv2.HttpMethod.GET], integration, authorizer });
+    httpApi.addRoutes({ path: '/api/parent/adults', methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST], integration, authorizer });
+httpApi.addRoutes({ path: '/api/parent/children/{childSub}/data', methods: [apigwv2.HttpMethod.GET], integration, authorizer });
     httpApi.addRoutes({ path: '/api/v2', methods: [apigwv2.HttpMethod.GET], integration, authorizer });
     httpApi.addRoutes({ path: '/api/v2/{section}', methods: [apigwv2.HttpMethod.PUT], integration, authorizer });
 

@@ -18,6 +18,9 @@ const TABS = ['summary', 'study', 'tasks', 'grades', 'goals'];
 const ARROW = { up: '↗', down: '↘', flat: '→', none: '–' };
 const cache = new Map(); // child sub -> { at, loading } | { at, error } | { at, data }
 const ui = { tab: 'summary', busy: false, msg: '', error: '', name: '', email: '' };
+const adu = { busy: false, msg: '', error: '', name: '', email: '' };
+const MAX_ADULTS = 4;
+const isAdmin = () => !(net.me && net.me.admin === false);
 
 const children = () => (net.me && net.me.children) || [];
 const gcls = (g) => (g < PASS_MARK ? 'hot' : g >= 7 ? 'good' : '');
@@ -190,7 +193,7 @@ export const family = {
     return h`<div class="page-head"><div><h1>${t('nav.family')}</h1><p class="muted">${t('fam.sub')}</p></div>
         <button class="btn ghost" data-act="family.reload">${icon('refresh')} ${t('fam.refresh')}</button></div>
       <p class="muted small">${t('fam.readOnly')} ${t('fam.notShared')}</p>
-      ${kids.length ? kids.map(childCard) : h`<section class="card"><p class="muted">${t('fam.noChildren')}</p><a class="btn" href="#/addchild">${t('nav.addchild')}</a></section>`}`;
+      ${kids.length ? kids.map(childCard) : h`<section class="card"><p class="muted">${t('fam.noChildren')}</p>${isAdmin() ? h`<a class="btn" href="#/addchild">${t('nav.addchild')}</a>` : ''}</section>`}`;
   },
   mount(arg) {
     if (arg) load(arg); else children().forEach((k) => load(k.sub));
@@ -215,6 +218,24 @@ export const addchild = {
   },
 };
 
+export const addadult = {
+  id: 'addadult', titleKey: 'nav.addadult',
+  view() {
+    const adults = (net.me && net.me.adults) || [];
+    return h`<div class="page-head"><div><h1>${t('adl.title')}</h1><p class="muted">${t('adl.sub')}</p></div></div>
+      <section class="card">
+        <div class="form">
+          <input id="adName" type="text" maxlength="40" placeholder="${t('add.name')}" value="${adu.name}" data-input="family.afield" data-field="name" data-enter="family.addAdult" aria-label="${t('add.name')}">
+          <input id="adEmail" type="email" maxlength="120" placeholder="${t('add.email')}" value="${adu.email}" data-input="family.afield" data-field="email" data-enter="family.addAdult" aria-label="${t('add.email')}">
+          <button class="btn" data-act="family.addAdult"${adu.busy ? h` disabled` : ''}>${adu.busy ? t('add.sending') : t('adl.send')}</button>
+        </div>
+        ${adu.msg ? h`<p class="good">${adu.msg}</p>` : ''}${adu.error ? h`<p class="err">${adu.error}</p>` : ''}
+        <p class="muted small">${t('adl.note')}</p>
+      </section>
+      <section class="card"><h2>${t('adl.list')}</h2>${adults.length ? adults.map((a) => h`<div class="row-line"><span><strong>${a.name}</strong> <span class="muted small">${a.email}</span></span></div>`) : h`<p class="muted">${t('adl.none')}</p>`}</section>`;
+  },
+};
+
 // Shown instead of the app when an account has no role yet.
 export const noprofile = {
   id: 'noprofile', titleKey: 'nopro.title',
@@ -232,6 +253,23 @@ register('family', {
     refresh();
   },
   field(el) { ui[el.dataset.field] = el.value; },
+  afield(el) { adu[el.dataset.field] = el.value; },
+  async addAdult() {
+    if (adu.busy) return;
+    const name = adu.name.trim(), email = adu.email.trim();
+    adu.msg = ''; adu.error = '';
+    if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { adu.error = t('add.err400'); refresh(); return; }
+    adu.busy = true; refresh();
+    try {
+      await api('POST', '/api/parent/adults', { name, email });
+      adu.msg = t('adl.ok', { email: email.toLowerCase() });
+      adu.name = ''; adu.email = '';
+      await reloadMe();
+    } catch (e) {
+      adu.error = e && e.status === 409 ? t('add.err409') : e && e.status === 422 ? t('adl.err422', { n: MAX_ADULTS }) : e && e.status === 400 ? t('add.err400') : t('add.err');
+    }
+    adu.busy = false; refresh();
+  },
   async add() {
     if (ui.busy) return;
     const name = ui.name.trim(), email = ui.email.trim();

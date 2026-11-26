@@ -219,5 +219,65 @@ const snapshot = () => JSON.stringify([...store.entries()].sort());
   await call(P, 'POST', '/api/parent/children', { name: 'One more', email: 'more@example.com' });
   check('at the limit Cognito is not called', cognitoCalls.length === callsAtLimit);
 
+  // ----- other adults (change 0002) -----
+  r = await call(C, 'POST', '/api/parent/adults', { name: 'Sneak', email: 'sneak@example.com' });
+  check('a child cannot add an adult -> 403', r.status === 403);
+  r = await call(N, 'POST', '/api/parent/adults', { name: 'Sneak', email: 'sneak@example.com' });
+  check('an account without a profile cannot add an adult -> 403', r.status === 403);
+  r = await call(null, 'GET', '/api/parent/adults');
+  check('no token on adults -> 401', r.status === 401);
+  r = await call(P, 'GET', '/api/me');
+  check('the family admin sees admin=true and an empty adults list', r.body.admin === true && r.body.adults.length === 0);
+
+  const snapAd = snapshot(), callsAd = cognitoCalls.length;
+  for (const [label, body] of [['no name', { email: 'a@example.com' }], ['bad email', { name: 'A', email: 'nope' }]]) {
+    r = await call(P, 'POST', '/api/parent/adults', body);
+    check('adult: invalid input (' + label + ') -> 400', r.status === 400);
+  }
+  r = await call(P, 'POST', '/api/parent/adults', { name: 'Taken', email: 'taken@example.com' });
+  check('adult: existing email -> 409 and nothing written', r.status === 409 && snapshot() === snapAd);
+  check('adult: invalid input never reaches Cognito', cognitoCalls.length === callsAd + 1);
+
+  const kidsOfP = (await call(P, 'GET', '/api/parent/children')).body.children;
+  r = await call(P, 'POST', '/api/parent/adults', { name: ' Ana   Ruiz ', email: 'ANA@' + 'example.com', role: 'child', addedBy: 'x' });
+  check('admin adds an adult -> 200', r.status === 200 && r.body.adult.name === 'Ana Ruiz' && r.body.adult.email === 'ana@example.com' && r.body.children === kidsOfP.length);
+  const A = r.body.adult.sub;
+  const profA = store.get(key('USER#' + A, 'PROFILE'));
+  check('the adult is a parent added by this admin, whatever the body said', profA.role.S === 'parent' && profA.addedBy.S === P);
+  check('the adult is linked to every child of the admin, both sides', kidsOfP.every((k) => store.has(key('USER#' + A, 'CHILD#' + k.sub)) && store.has(key('USER#' + k.sub, 'PARENT#' + A))));
+  r = await call(A, 'GET', '/api/me');
+  check('the adult opens the app as a non-admin parent with the children', r.status === 200 && r.body.role === 'parent' && r.body.admin === false && r.body.children.length === kidsOfP.length && r.body.adults === undefined);
+  r = await call(A, 'GET', '/api/parent/children/' + C + '/data');
+  check('the adult can read a linked child (read only)', r.status === 200 && r.body.child.sub === C && Array.isArray(r.body.core.tasks));
+  r = await call(A, 'POST', '/api/parent/children', { name: 'Nope', email: 'nope@example.com' });
+  check('the adult cannot create a child -> 403', r.status === 403);
+  r = await call(A, 'POST', '/api/parent/adults', { name: 'Nope', email: 'nope2@example.com' });
+  check('the adult cannot add another adult -> 403', r.status === 403);
+  r = await call(A, 'GET', '/api/parent/adults');
+  check('the adult cannot list adults -> 403', r.status === 403);
+  r = await call(Q, 'GET', '/api/parent/children/' + C + '/data');
+  check('an unrelated parent still cannot read the child', r.status === 404);
+  r = await call(C, 'GET', '/api/me');
+  check('the child now sees both parents', r.body.parents.length === 2 && r.body.parents.some((p) => p.email === 'ana@example.com'));
+  r = await call(P, 'GET', '/api/me');
+  check('the admin sees the adult listed', r.body.adults.length === 1 && r.body.adults[0].email === 'ana@example.com');
+
+  // a child created after the adult is linked to the adult too (use Q: no children yet)
+  r = await call(Q, 'POST', '/api/parent/adults', { name: 'Bo', email: 'bo@example.com' });
+  const B = r.body.adult.sub;
+  check('admin with no children can add an adult (0 children linked)', r.status === 200 && r.body.children === 0);
+  r = await call(Q, 'POST', '/api/parent/children', { name: 'Fio', email: 'fio@example.com' });
+  const F = r.body.child.sub;
+  check('a later child is linked to the adult on both sides', r.status === 200 && store.has(key('USER#' + B, 'CHILD#' + F)) && store.has(key('USER#' + F, 'PARENT#' + B)));
+  r = await call(B, 'GET', '/api/parent/children/' + F + '/data');
+  check('the adult reads the later child', r.status === 200);
+  r = await call(A, 'GET', '/api/parent/children/' + F + '/data');
+  check('an adult of another family cannot read that child', r.status === 404);
+
+  // limit of 4 adults
+  let lastAd;
+  for (let k = 0; k < 5; k++) lastAd = await call(Q, 'POST', '/api/parent/adults', { name: 'Ad ' + k, email: 'ad' + k + '@example.com' });
+  check('an admin can add at most 4 adults (-> 422 after that)', lastAd.status === 422 && (await call(Q, 'GET', '/api/parent/adults')).body.adults.length === 4);
+
   console.log(out.join('\n'));
 })().catch((e) => { console.log(out.join('\n')); console.log('EXCEPTION ' + e.stack); });
